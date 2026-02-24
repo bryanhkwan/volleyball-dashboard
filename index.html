@@ -190,7 +190,7 @@ tbody td{padding:.45rem .55rem;white-space:nowrap}
   </div>
   <div id="ostats" class="ogrid"></div>
   <div class="main">
-    <div class="tp active" id="p-players"><div class="tw"><div class="thb"><h3>All Players</h3><span class="cnt" id="plc"></span></div><div class="tscr" id="plt" style="max-height:none"></div></div></div>
+    <div class="tp active" id="p-players"><div class="tw"><div class="thb"><h3>All Players</h3><span class="cnt" id="plc"></span><div style="display:flex;gap:.3rem;align-items:center" id="pgnav"></div></div><div class="tscr" id="plt"></div></div></div>
     <div class="tp" id="p-positions"><div id="pgd"></div></div>
     <div class="tp" id="p-roster"><div id="rz"></div></div>
     <div class="tp" id="p-weights"><div id="wz"></div></div>
@@ -424,9 +424,9 @@ function initD(){document.getElementById('tpc').textContent=ALL.length.toLocaleS
   applyF();renderW();renderVS();renderMeth()}
 
 function applyF(){const pos=document.getElementById('fp').value,tier=document.getElementById('ft').value,search=document.getElementById('fs').value.toLowerCase().trim();
-  FILT=ALL.filter(p=>{if(pos!=='all'&&p._np!==pos)return false;if(tier!=='all'&&p._tier!==tier)return false;if(search&&!p.Player.toLowerCase().includes(search)&&!p.Team.toLowerCase().includes(search))return false;return true});sortD();renderAll()}
+  FILT=ALL.filter(p=>{if(pos!=='all'&&p._np!==pos)return false;if(tier!=='all'&&p._tier!==tier)return false;if(search&&!p.Player.toLowerCase().includes(search)&&!p.Team.toLowerCase().includes(search))return false;return true});PG=0;sortD();renderAll()}
 function sortD(){FILT.sort((a,b)=>{let av,bv;switch(SC){case'score':av=a._score;bv=b._score;break;case'val':av=a._val;bv=b._val;break;case'kills':av=+a._kps;bv=+b._kps;break;case'digs':av=+a._dps;bv=+b._dps;break;case'assists':av=+a._aps;bv=+b._aps;break;case'blocks':av=+a._bps;bv=+b._bps;break;case'aces':av=+a._acps;bv=+b._acps;break;case'hitpct':av=a['Hit %'];bv=b['Hit %'];break;case'pts':av=+a._pps;bv=+b._pps;break;case'player':av=a.Player;bv=b.Player;break;default:av=a._score;bv=b._score}if(SC==='player')return SD==='asc'?av.localeCompare(bv):bv.localeCompare(av);return SD==='asc'?av-bv:bv-av})}
-function setS(c){if(SC===c)SD=SD==='desc'?'asc':'desc';else{SC=c;SD='desc'}sortD();renderAll()}
+function setS(c){if(SC===c)SD=SD==='desc'?'asc':'desc';else{SC=c;SD='desc'}PG=0;sortD();renderAll()}
 
 // RENDER HELPERS
 function pbH(pos){const c=pos.toLowerCase().replace('/','');return `<span class="pb ${c}">${pos}</span>`}
@@ -443,16 +443,32 @@ function sBarH(s){const p=Math.min(s,100);let c='var(--t3)';if(s>=82)c='var(--yw
 function thSH(l,c){const a=SC===c;return `<th class="${a?'sorted':''}" onclick="setS('${c}')">${l}${a?(SD==='desc'?' ▼':' ▲'):''}</th>`}
 function tagHH(tags,click){return tags.map(t=>`<span class="tag" style="background:${t.bg};color:${t.c}" ${click?`onclick="event.stopPropagation();showTT(this,'${t.t.replace(/'/g,"\\'")}')"`:``}>${t.t}</span>`).join('')}
 
-function buildTbl(pl,mode){
+function buildTbl(pl,mode,offset){
+  const o=offset||0;
   let h=`<table><thead><tr><th>#</th>${thSH('Player','player')}<th>Pos</th>${thSH('Score','score')}<th>Tier</th>${thSH('Value','val')}<th>Tags</th>${thSH('K/S','kills')}${thSH('Hit%','hitpct')}${thSH('D/S','digs')}${thSH('A/S','assists')}${thSH('B/S','blocks')}${thSH('Ace/S','aces')}<th>Sets</th>${mode==='add'?'<th></th>':''}</tr></thead><tbody>`;
   pl.forEach((p,i)=>{const inR=ROST.some(r=>r._id===p._id);
-    h+=`<tr onclick="openP(${p._id})"><td class="mono" style="color:var(--t3);font-size:.62rem">${i+1}</td><td><span class="pn">${p.Player}</span><br><span class="tn">${p.Team}</span></td><td>${pbH(p._np)}</td><td>${sBarH(p._score)}</td><td>${tbH(p._tier)}</td><td class="vc">$${p._val.toLocaleString()}</td><td style="max-width:160px;white-space:normal">${tagHH(p._tags.slice(0,3),false)}</td><td class="mono" style="font-size:.68rem">${p._kps}</td><td class="mono" style="font-size:.68rem">${(p['Hit %']||0).toFixed(3)}</td><td class="mono" style="font-size:.68rem">${p._dps}</td><td class="mono" style="font-size:.68rem">${p._aps}</td><td class="mono" style="font-size:.68rem">${p._bps}</td><td class="mono" style="font-size:.68rem">${p._acps}</td><td class="mono" style="font-size:.68rem;color:var(--t3)">${p.Sets}</td>${mode==='add'?`<td onclick="event.stopPropagation()">${inR?'<span style="color:var(--gn);font-size:.58rem">✓</span>':`<button class="btn-ad" onclick="addR(${p._id})">+</button>`}</td>`:''}</tr>`});
+    h+=`<tr onclick="openP(${p._id})"><td class="mono" style="color:var(--t3);font-size:.62rem">${o+i+1}</td><td><span class="pn">${p.Player}</span><br><span class="tn">${p.Team}</span></td><td>${pbH(p._np)}</td><td>${sBarH(p._score)}</td><td>${tbH(p._tier)}</td><td class="vc">$${p._val.toLocaleString()}</td><td style="max-width:160px;white-space:normal">${tagHH(p._tags.slice(0,3),false)}</td><td class="mono" style="font-size:.68rem">${p._kps}</td><td class="mono" style="font-size:.68rem">${(p['Hit %']||0).toFixed(3)}</td><td class="mono" style="font-size:.68rem">${p._dps}</td><td class="mono" style="font-size:.68rem">${p._aps}</td><td class="mono" style="font-size:.68rem">${p._bps}</td><td class="mono" style="font-size:.68rem">${p._acps}</td><td class="mono" style="font-size:.68rem;color:var(--t3)">${p.Sets}</td>${mode==='add'?`<td onclick="event.stopPropagation()">${inR?'<span style="color:var(--gn);font-size:.58rem">✓</span>':`<button class="btn-ad" onclick="addR(${p._id})">+</button>`}</td>`:''}</tr>`});
   return h+'</tbody></table>'}
 
 function renderAll(){renderStats();renderPlayers();renderPos();renderRost()}
 function renderStats(){const c=document.getElementById('ostats');const avg=FILT.length?(FILT.reduce((s,p)=>s+p._score,0)/FILT.length).toFixed(1):0;const avgV=FILT.length?Math.round(FILT.reduce((s,p)=>s+p._val,0)/FILT.length):0;const el=FILT.filter(p=>p._tier==='Elite').length;const top=FILT.length?FILT.reduce((a,b)=>a._score>b._score?a:b):null;const spent=ROST.reduce((s,p)=>s+p._val,0);
   c.innerHTML=`<div class="sc"><div class="lb">Players</div><div class="vl mono">${FILT.length.toLocaleString()}</div></div><div class="sc"><div class="lb">Avg Score</div><div class="vl mono">${avg}</div></div><div class="sc"><div class="lb">Avg Value</div><div class="vl mono">$${avgV.toLocaleString()}</div></div><div class="sc"><div class="lb">Elite</div><div class="vl mono" style="color:var(--yw)">${el}</div></div><div class="sc"><div class="lb">#1 Player</div><div class="vl" style="font-size:.82rem;font-family:'DM Sans'">${top?top.Player:'—'}</div><div class="su">${top?top.Team+' · '+top._score:''}</div></div><div class="sc acc"><div class="lb">Budget Left</div><div class="vl mono">$${(TBUDGET-spent).toLocaleString()}</div><div class="su">${ROST.length}/${RSIZE}</div></div>`}
-function renderPlayers(){document.getElementById('plt').innerHTML=buildTbl(FILT,'none');document.getElementById('plc').textContent=`${FILT.length.toLocaleString()} players`}
+let PG=0,PG_SIZE=200;
+function renderPlayers(){
+  const total=FILT.length;const pages=Math.ceil(total/PG_SIZE);PG=Math.min(PG,pages-1);PG=Math.max(PG,0);
+  const start=PG*PG_SIZE;const slice=FILT.slice(start,start+PG_SIZE);
+  document.getElementById('plt').innerHTML=buildTbl(slice,'none',start);
+  document.getElementById('plc').textContent=`${start+1}–${Math.min(start+PG_SIZE,total)} of ${total.toLocaleString()}`;
+  // Pagination nav
+  const nav=document.getElementById('pgnav');
+  if(pages<=1){nav.innerHTML='';return}
+  let h=`<button class="btn-s" onclick="PG=0;renderPlayers()" ${PG===0?'disabled style="opacity:.3"':''}>«</button>`;
+  h+=`<button class="btn-s" onclick="PG=Math.max(0,PG-1);renderPlayers()" ${PG===0?'disabled style="opacity:.3"':''}>‹</button>`;
+  h+=`<span style="font-size:.65rem;color:var(--t2);padding:0 .3rem">${PG+1}/${pages}</span>`;
+  h+=`<button class="btn-s" onclick="PG=Math.min(${pages-1},PG+1);renderPlayers()" ${PG>=pages-1?'disabled style="opacity:.3"':''}>›</button>`;
+  h+=`<button class="btn-s" onclick="PG=${pages-1};renderPlayers()" ${PG>=pages-1?'disabled style="opacity:.3"':''}>»</button>`;
+  nav.innerHTML=h;
+}
 function renderPos(){const g=document.getElementById('pgd');g.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:.7rem;margin-top:.7rem';
   g.innerHTML=['OH','MB','S','L/DS','OPP'].map(pos=>{const pp=[...FILT].filter(p=>p._np===pos).sort((a,b)=>b._score-a._score).slice(0,10);return `<div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;overflow:hidden"><div style="padding:.6rem .8rem;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between"><h4 style="font-size:.8rem;font-weight:600">${pbH(pos)} ${PN[pos]}</h4><span style="font-size:.62rem;color:var(--t3)">${FILT.filter(p=>p._np===pos).length}</span></div><div style="padding:.15rem 0">${pp.map((p,i)=>`<div style="display:flex;align-items:center;padding:.35rem .8rem;gap:.5rem;cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''" onclick="openP(${p._id})"><span class="mono" style="font-size:.62rem;color:var(--t3);min-width:16px">${i+1}</span><div style="flex:1;min-width:0;overflow:hidden"><div style="font-weight:600;font-size:.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.Player}</div><div style="font-size:.6rem;color:var(--t3)">${p.Team} · ${p._score}</div></div><span class="mono" style="font-size:.7rem;font-weight:700;color:var(--gn)">$${p._val.toLocaleString()}</span></div>`).join('')}</div></div>`}).join('')}
 
