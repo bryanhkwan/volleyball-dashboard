@@ -432,7 +432,15 @@ function setS(c){if(SC===c)SD=SD==='desc'?'asc':'desc';else{SC=c;SD='desc'}sortD
 
 // RENDER HELPERS
 function pbH(pos){const c=pos.toLowerCase().replace('/','');return `<span class="pb ${c}">${pos}</span>`}
-function tbH(t){return `<span class="tb ${t.toLowerCase()}">${t}</span>`}
+const TIER_INFO={
+  'Elite':'Score 82–100. Top ~5% of players at their position. These are All-Conference / All-American caliber players who dominate in their key stats. They\'re the players who change games and are worth premium NIL investment.',
+  'Starter':'Score 65–81. Above-average players who are reliable starters on most rosters. They perform well across their key stats and are consistent contributors. Solid NIL value — they start and produce.',
+  'Rotation':'Score 45–64. Average-range players who contribute in a rotation role. They may start on some teams or come in for specific situations. Good developmental upside — could become starters with improvement in 1–2 areas.',
+  'Bench':'Score 28–44. Below-average production relative to position peers. These players see limited court time or are early in development. Low NIL value currently but may have potential if they improve.',
+  'Developmental':'Score 0–27. Minimal statistical production — either very limited playing time, freshmen getting their first reps, or players whose skills haven\'t translated to stats yet. Lowest NIL tier but could be future contributors.'
+};
+function tbH(t){return `<span class="tb ${t.toLowerCase()}" style="cursor:pointer" onclick="event.stopPropagation();showTierTT(this,'${t}')">${t}</span>`}
+function showTierTT(el,tier){const tt=document.getElementById('ttp');const r=el.getBoundingClientRect();document.getElementById('ttt').textContent=tier+' Tier';document.getElementById('ttb').textContent=TIER_INFO[tier]||'No info.';tt.style.top=Math.min(r.bottom+6,window.innerHeight-180)+'px';tt.style.left=Math.min(r.left,window.innerWidth-320)+'px';tt.classList.add('show')}
 function sBarH(s){const p=Math.min(s,100);let c='var(--t3)';if(s>=82)c='var(--yw)';else if(s>=65)c='var(--gn)';else if(s>=45)c='var(--bl)';else if(s>=28)c='var(--pu)';return `<div class="sb"><span class="sn" style="color:${c}">${s}</span><div class="bar"><div class="bi" style="width:${p}%;background:${c}"></div></div></div>`}
 function thSH(l,c){const a=SC===c;return `<th class="${a?'sorted':''}" onclick="setS('${c}')">${l}${a?(SD==='desc'?' ▼':' ▲'):''}</th>`}
 function tagHH(tags,click){return tags.map(t=>`<span class="tag" style="background:${t.bg};color:${t.c}" ${click?`onclick="event.stopPropagation();showTT(this,'${t.t.replace(/'/g,"\\'")}')"`:``}>${t.t}</span>`).join('')}
