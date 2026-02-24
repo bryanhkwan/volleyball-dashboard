@@ -181,8 +181,7 @@ tbody td{padding:.45rem .55rem;white-space:nowrap}
     <div class="cg"><label>Search</label><input type="text" id="fs" placeholder="Player or team..."></div>
   </div>
   <div class="tbar">
-    <button class="tbtn active" data-tab="overview">Overview</button>
-    <button class="tbtn" data-tab="rankings">Rankings</button>
+    <button class="tbtn active" data-tab="players">Players</button>
     <button class="tbtn" data-tab="positions">Positions</button>
     <button class="tbtn" data-tab="roster">Roster Builder</button>
     <button class="tbtn" data-tab="weights">⚙ Weights</button>
@@ -191,8 +190,7 @@ tbody td{padding:.45rem .55rem;white-space:nowrap}
   </div>
   <div id="ostats" class="ogrid"></div>
   <div class="main">
-    <div class="tp active" id="p-overview"><div class="tw"><div class="thb"><h3>Top 50</h3><span class="cnt" id="t50c"></span></div><div class="tscr" id="t50t"></div></div></div>
-    <div class="tp" id="p-rankings"><div class="tw"><div class="thb"><h3>Complete Rankings</h3><span class="cnt" id="flc"></span></div><div class="tscr" id="flt"></div></div></div>
+    <div class="tp active" id="p-players"><div class="tw"><div class="thb"><h3>All Players</h3><span class="cnt" id="plc"></span></div><div class="tscr" id="plt" style="max-height:none"></div></div></div>
     <div class="tp" id="p-positions"><div id="pgd"></div></div>
     <div class="tp" id="p-roster"><div id="rz"></div></div>
     <div class="tp" id="p-weights"><div id="wz"></div></div>
@@ -451,11 +449,10 @@ function buildTbl(pl,mode){
     h+=`<tr onclick="openP(${p._id})"><td class="mono" style="color:var(--t3);font-size:.62rem">${i+1}</td><td><span class="pn">${p.Player}</span><br><span class="tn">${p.Team}</span></td><td>${pbH(p._np)}</td><td>${sBarH(p._score)}</td><td>${tbH(p._tier)}</td><td class="vc">$${p._val.toLocaleString()}</td><td style="max-width:160px;white-space:normal">${tagHH(p._tags.slice(0,3),false)}</td><td class="mono" style="font-size:.68rem">${p._kps}</td><td class="mono" style="font-size:.68rem">${(p['Hit %']||0).toFixed(3)}</td><td class="mono" style="font-size:.68rem">${p._dps}</td><td class="mono" style="font-size:.68rem">${p._aps}</td><td class="mono" style="font-size:.68rem">${p._bps}</td><td class="mono" style="font-size:.68rem">${p._acps}</td><td class="mono" style="font-size:.68rem;color:var(--t3)">${p.Sets}</td>${mode==='add'?`<td onclick="event.stopPropagation()">${inR?'<span style="color:var(--gn);font-size:.58rem">✓</span>':`<button class="btn-ad" onclick="addR(${p._id})">+</button>`}</td>`:''}</tr>`});
   return h+'</tbody></table>'}
 
-function renderAll(){renderStats();renderT50();renderFull();renderPos();renderRost()}
+function renderAll(){renderStats();renderPlayers();renderPos();renderRost()}
 function renderStats(){const c=document.getElementById('ostats');const avg=FILT.length?(FILT.reduce((s,p)=>s+p._score,0)/FILT.length).toFixed(1):0;const avgV=FILT.length?Math.round(FILT.reduce((s,p)=>s+p._val,0)/FILT.length):0;const el=FILT.filter(p=>p._tier==='Elite').length;const top=FILT.length?FILT.reduce((a,b)=>a._score>b._score?a:b):null;const spent=ROST.reduce((s,p)=>s+p._val,0);
   c.innerHTML=`<div class="sc"><div class="lb">Players</div><div class="vl mono">${FILT.length.toLocaleString()}</div></div><div class="sc"><div class="lb">Avg Score</div><div class="vl mono">${avg}</div></div><div class="sc"><div class="lb">Avg Value</div><div class="vl mono">$${avgV.toLocaleString()}</div></div><div class="sc"><div class="lb">Elite</div><div class="vl mono" style="color:var(--yw)">${el}</div></div><div class="sc"><div class="lb">#1 Player</div><div class="vl" style="font-size:.82rem;font-family:'DM Sans'">${top?top.Player:'—'}</div><div class="su">${top?top.Team+' · '+top._score:''}</div></div><div class="sc acc"><div class="lb">Budget Left</div><div class="vl mono">$${(TBUDGET-spent).toLocaleString()}</div><div class="su">${ROST.length}/${RSIZE}</div></div>`}
-function renderT50(){const t=[...FILT].sort((a,b)=>b._score-a._score).slice(0,50);document.getElementById('t50t').innerHTML=buildTbl(t,'none');document.getElementById('t50c').textContent=`Top ${t.length} of ${FILT.length.toLocaleString()}`}
-function renderFull(){const d=FILT.slice(0,500);document.getElementById('flt').innerHTML=buildTbl(d,'none');document.getElementById('flc').textContent=FILT.length>500?`500/${FILT.length.toLocaleString()}`:`${FILT.length.toLocaleString()}`}
+function renderPlayers(){document.getElementById('plt').innerHTML=buildTbl(FILT,'none');document.getElementById('plc').textContent=`${FILT.length.toLocaleString()} players`}
 function renderPos(){const g=document.getElementById('pgd');g.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:.7rem;margin-top:.7rem';
   g.innerHTML=['OH','MB','S','L/DS','OPP'].map(pos=>{const pp=[...FILT].filter(p=>p._np===pos).sort((a,b)=>b._score-a._score).slice(0,10);return `<div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;overflow:hidden"><div style="padding:.6rem .8rem;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between"><h4 style="font-size:.8rem;font-weight:600">${pbH(pos)} ${PN[pos]}</h4><span style="font-size:.62rem;color:var(--t3)">${FILT.filter(p=>p._np===pos).length}</span></div><div style="padding:.15rem 0">${pp.map((p,i)=>`<div style="display:flex;align-items:center;padding:.35rem .8rem;gap:.5rem;cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''" onclick="openP(${p._id})"><span class="mono" style="font-size:.62rem;color:var(--t3);min-width:16px">${i+1}</span><div style="flex:1;min-width:0;overflow:hidden"><div style="font-weight:600;font-size:.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.Player}</div><div style="font-size:.6rem;color:var(--t3)">${p.Team} · ${p._score}</div></div><span class="mono" style="font-size:.7rem;font-weight:700;color:var(--gn)">$${p._val.toLocaleString()}</span></div>`).join('')}</div></div>`}).join('')}
 
@@ -465,7 +462,7 @@ function openP(id){const p=ALL.find(x=>x._id===id);if(!p)return;const stats=gSP(
   const hist=HIST[p.Player]||[];const prevTeams=[...new Set(hist.filter(h=>h.Season!==2025&&h.Team!==p.Team).map(h=>h.Team))];const yearsActive=hist.length>1?`${hist[0].Season}–2025`:'2025';
   document.getElementById('mh').innerHTML=`<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">${pbH(p._np)} ${tbH(p._tier)}${hist.length>1?` <span style="font-size:.6rem;color:var(--t3);background:var(--s2);padding:.12rem .35rem;border-radius:4px">${yearsActive} · ${hist.length} seasons</span>`:''}</div><div style="font-size:1.3rem;font-weight:700">${p.Player}</div><div style="color:var(--t2);font-size:.8rem">${p.Team}${prevTeams.length?' <span style="color:var(--cy);font-size:.68rem">(prev: '+prevTeams.join(', ')+')</span>':''}  · ${PN[p._np]} · ${p.Sets} sets / ${p.Matches} matches${VS.setsAdj==='on'?` · Sets adj: ${(adjFactor*100).toFixed(0)}%`:''}</div><div style="margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.2rem">${tagHH(p._tags,true)}</div>`;
   document.getElementById('mb').innerHTML=`<div class="pgrid">
-    <div class="psec" style="text-align:center"><h4>Score</h4><div class="mono" style="font-size:2.5rem;font-weight:700;color:${p._score>=82?'var(--yw)':p._score>=65?'var(--gn)':p._score>=45?'var(--bl)':'var(--pu)'}">${p._score}</div><div style="font-size:.7rem;color:var(--t2)">/ 100</div><div class="mono" style="margin-top:.5rem;font-size:1.3rem;font-weight:700;color:var(--gn)">$${p._val.toLocaleString()}</div><div style="font-size:.6rem;color:var(--t3)">NIL Value</div></div>
+    <div class="psec" style="text-align:center"><h4>Score</h4><div class="mono" style="font-size:2.5rem;font-weight:700;color:${p._score>=82?'var(--yw)':p._score>=65?'var(--gn)':p._score>=45?'var(--bl)':'var(--pu)'}">${p._score}</div><div style="font-size:.7rem;color:var(--t2)">/ 100</div><div class="mono" style="margin-top:.5rem;font-size:1.3rem;font-weight:700;color:var(--gn)">$${p._val.toLocaleString()}</div><div style="font-size:.6rem;color:var(--t3)">Predicted Value</div></div>
     <div class="psec"><h4>Raw Stats</h4><table style="width:100%;font-size:.72rem">${[['Kills',p.Kills,p._kps+'/s'],['Hit %',(p['Hit %']||0).toFixed(3)],['Digs',p.Digs,p._dps+'/s'],['Assists',p.Assists,p._aps+'/s'],['Blocks',p['Total Blk'],p._bps+'/s'],['Aces',p.Aces,p._acps+'/s'],['Points',p.PTS,p._pps+'/s'],['Atk Err',p['Atk Err'],((p['Atk Err']||0)/Math.max(p.Atk||1,1)*100).toFixed(1)+'%'],['Serv Err',p['Serv Err']],['BH Err',p['BH Err']]].map(([l,v,sub])=>`<tr><td style="color:var(--t2);padding:.18rem 0">${l}</td><td style="text-align:right" class="mono">${v}${sub?` <span style="color:var(--t3);font-size:.58rem">${sub}</span>`:''}</td></tr>`).join('')}</table></div>
     <div class="psec full"><h4>Percentile Breakdown <span style="font-size:.6rem;font-weight:400;color:var(--t3)">vs ${p._np} — click stat for info</span></h4><div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.3rem">${Object.entries(stats).map(([st,v])=>{let c='var(--t3)';if(v.pctile>=80)c='var(--yw)';else if(v.pctile>=60)c='var(--gn)';else if(v.pctile>=40)c='var(--bl)';else if(v.pctile>=20)c='var(--pu)';else c='var(--rd)';return `<div style="flex:1;min-width:68px;text-align:center;cursor:pointer" onclick="event.stopPropagation();showSTT(this,'${st}')"><div style="font-size:.55rem;color:var(--t3);text-transform:uppercase;margin-bottom:.15rem">${SI[st]?.n||st}</div><div style="height:4px;background:var(--s3);border-radius:2px;overflow:hidden;margin-bottom:.12rem"><div style="height:100%;border-radius:2px;width:${v.pctile}%;background:${c}"></div></div><div class="mono" style="font-size:.68rem;font-weight:700;color:${c}">${v.pctile}%</div></div>`}).join('')}</div></div>
     <div class="psec"><h4>💪 Strengths</h4>${str.length?str.map(([st,v])=>`<div style="display:flex;align-items:center;gap:.3rem;font-size:.75rem;padding:.15rem 0"><span style="color:var(--gn)">▲</span>${SI[st]?.n||st}: <b style="color:var(--gn)">${v.pctile}th</b></div>`).join(''):'<div style="color:var(--t3);font-size:.75rem">None</div>'}</div>
@@ -530,7 +527,7 @@ function openHist(playerName,season){
   document.getElementById('mh').innerHTML=`<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">${pbH(p._np)} ${tbH(tier)} <span style="font-size:.62rem;color:var(--yw);background:var(--yd);padding:.12rem .4rem;border-radius:4px;font-weight:600">${season} Season</span>${cur25?` <button class="btn-s" onclick="openP(${cur25._id})" style="font-size:.58rem;padding:.15rem .4rem">→ View 2025</button>`:''}</div><div style="font-size:1.3rem;font-weight:700">${playerName}</div><div style="color:var(--t2);font-size:.8rem">${h.Team} · ${PN[p._np]||p.Pos} · ${p.Sets} sets / ${p.Matches||'?'} matches</div><div style="margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.2rem">${tagHH(tags,true)}${allSeasons.length>1?` <span style="font-size:.55rem;color:var(--t3);padding:.1rem .3rem">| Other seasons: ${allSeasons.filter(y=>y!==season).map(y=>`<span style="color:var(--cy);cursor:pointer;text-decoration:underline" onclick="openHist('${playerName.replace(/'/g,"\\'")}',${y})">${y}</span>`).join(' ')}</span>`:''}</div>`;
 
   document.getElementById('mb').innerHTML=`<div class="pgrid">
-    <div class="psec" style="text-align:center"><h4>${season} Score <span style="font-size:.58rem;color:var(--t3);font-weight:400">scored vs 2025 peers</span></h4><div class="mono" style="font-size:2.5rem;font-weight:700;color:${score>=82?'var(--yw)':score>=65?'var(--gn)':score>=45?'var(--bl)':'var(--pu)'}">${score}</div><div style="font-size:.7rem;color:var(--t2)">/ 100</div><div class="mono" style="margin-top:.5rem;font-size:1.3rem;font-weight:700;color:var(--gn)">$${val.toLocaleString()}</div><div style="font-size:.6rem;color:var(--t3)">Projected NIL Value</div></div>
+    <div class="psec" style="text-align:center"><h4>${season} Score <span style="font-size:.58rem;color:var(--t3);font-weight:400">scored vs 2025 peers</span></h4><div class="mono" style="font-size:2.5rem;font-weight:700;color:${score>=82?'var(--yw)':score>=65?'var(--gn)':score>=45?'var(--bl)':'var(--pu)'}">${score}</div><div style="font-size:.7rem;color:var(--t2)">/ 100</div><div class="mono" style="margin-top:.5rem;font-size:1.3rem;font-weight:700;color:var(--gn)">$${val.toLocaleString()}</div><div style="font-size:.6rem;color:var(--t3)">Projected Predicted Value</div></div>
     <div class="psec"><h4>${season} Raw Stats</h4><table style="width:100%;font-size:.72rem">${[['Kills',p.Kills||0,kps+'/s'],['Hit %',(p['Hit %']||0).toFixed(3)],['Digs',p.Digs||0,dps+'/s'],['Assists',p.Assists||0,aps+'/s'],['Blocks',p['Total Blk']||0,bps+'/s'],['Aces',p.Aces||0,acps+'/s'],['Points',p.PTS||0,pps+'/s'],['Atk Err',p['Atk Err']||0,((p['Atk Err']||0)/Math.max(p.Atk||1,1)*100).toFixed(1)+'%'],['Serv Err',p['Serv Err']||0],['BH Err',p['BH Err']||0]].map(([l,v,sub])=>`<tr><td style="color:var(--t2);padding:.18rem 0">${l}</td><td style="text-align:right" class="mono">${v}${sub?` <span style="color:var(--t3);font-size:.58rem">${sub}</span>`:''}</td></tr>`).join('')}</table></div>
     <div class="psec full"><h4>Percentile Breakdown <span style="font-size:.6rem;font-weight:400;color:var(--t3)">vs 2025 ${p._np} players</span></h4><div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.3rem">${Object.entries(stats).map(([st,v])=>{let c='var(--t3)';if(v.pctile>=80)c='var(--yw)';else if(v.pctile>=60)c='var(--gn)';else if(v.pctile>=40)c='var(--bl)';else if(v.pctile>=20)c='var(--pu)';else c='var(--rd)';return `<div style="flex:1;min-width:68px;text-align:center;cursor:pointer" onclick="event.stopPropagation();showSTT(this,'${st}')"><div style="font-size:.55rem;color:var(--t3);text-transform:uppercase;margin-bottom:.15rem">${SI[st]?.n||st}</div><div style="height:4px;background:var(--s3);border-radius:2px;overflow:hidden;margin-bottom:.12rem"><div style="height:100%;border-radius:2px;width:${v.pctile}%;background:${c}"></div></div><div class="mono" style="font-size:.68rem;font-weight:700;color:${c}">${v.pctile}%</div></div>`}).join('')}</div></div>
     <div class="psec"><h4>💪 Strengths</h4>${str.length?str.map(([st,v])=>`<div style="display:flex;align-items:center;gap:.3rem;font-size:.75rem;padding:.15rem 0"><span style="color:var(--gn)">▲</span>${SI[st]?.n||st}: <b style="color:var(--gn)">${v.pctile}th</b></div>`).join(''):'<div style="color:var(--t3);font-size:.75rem">None</div>'}</div>
@@ -547,10 +544,11 @@ document.addEventListener('click',e=>{if(!e.target.closest('.ttpop')&&!e.target.
 
 // ROSTER
 function addR(id){const p=ALL.find(x=>x._id===id);if(!p||ROST.some(r=>r._id===id))return;if(ROST.length>=RSIZE)return alert(`Roster full (${RSIZE}).`);ROST.push(p);renderAll()}
-function rmR(id){ROST=ROST.filter(r=>r._id!==id);renderAll()}
-function swpR(out,inn){ROST=ROST.filter(r=>r._id!==out);const p=ALL.find(x=>x._id===inn);if(p)ROST.push(p);renderAll()}
+function rmR(id){ROST=ROST.filter(r=>r._id!==id);SWAPPED.delete(id);renderAll()}
+function swpR(out,inn){ROST=ROST.filter(r=>r._id!==out);const p=ALL.find(x=>x._id===inn);if(p){ROST.push(p);SWAPPED.add(inn)}renderAll()}
 function addAll(){const avail=FILT.filter(p=>!ROST.some(r=>r._id===p._id)).sort((a,b)=>b._score-a._score);for(const p of avail){if(ROST.length>=RSIZE)break;const spent=ROST.reduce((s,r)=>s+r._val,0);if(p._val<=TBUDGET-spent&&p._val<=PBUDGET)ROST.push(p)}renderAll()}
-function clearR(){ROST=[];renderAll()}
+function clearR(){ROST=[];SWAPPED.clear();renderAll()}
+let SWAPPED=new Set(); // Track players swapped in via recommendation — they won't be suggested for further swaps
 
 function renderRost(){
   const z=document.getElementById('rz');const spent=ROST.reduce((s,p)=>s+p._val,0);const rem=TBUDGET-spent;
@@ -573,36 +571,46 @@ function renderRost(){
   let recs='';
   if(pn.length&&ROST.length>=1){for(const need of pn.slice(0,2)){const cands=ALL.filter(p=>p._np===need.pos&&!ROST.some(r=>r._id===p._id)&&p._val<=rem&&p._val<=PBUDGET).sort((a,b)=>b._score-a._score).slice(0,3);if(cands.length)recs+=`<div style="margin-bottom:.5rem"><div style="font-size:.72rem;font-weight:600;color:var(--t2);margin-bottom:.2rem">Recommend ${need.pos} (${PN[need.pos]}):</div>${cands.map(p=>`<div class="rec" onclick="openP(${p._id})" style="cursor:pointer"><div class="ri"><div class="rn">${p.Player}</div><div class="rt">${p.Team} · ${p._score}</div></div>${pbH(p._np)}<span class="vc">$${p._val.toLocaleString()}</span><button class="btn-ad" onclick="event.stopPropagation();addR(${p._id})">+ Add</button></div>`).join('')}</div>`}}
 
-  // Swap recs — ONLY for players significantly below team avg AND respects position balance
+  // Swap recs — ONLY for players significantly below team avg, skip already-swapped-in players, offer BOTH same-pos and cross-pos options
   let swaps='';
   if(ROST.length>=5){
     const teamAvg=ROST.reduce((s,p)=>s+p._score,0)/ROST.length;
-    const swapThreshold=teamAvg*0.75; // Only swap if player is 25%+ below team average
-    // Find swap candidates: below threshold, sorted worst first
-    const weakPlayers=[...ROST].filter(p=>p._score<swapThreshold).sort((a,b)=>a._score-b._score).slice(0,2);
+    const swapThreshold=teamAvg*0.75;
+    // Eligible for swap: below threshold AND not already swapped in via recommendation
+    const weakPlayers=[...ROST].filter(p=>p._score<swapThreshold&&!SWAPPED.has(p._id)).sort((a,b)=>a._score-b._score).slice(0,2);
     
     for(const wp of weakPlayers){
-      // Only suggest same-position swaps, OR swap from surplus pos to needed pos
-      let targetPos=wp._np;
-      let swapLabel=`Upgrade ${wp.Player} (${wp._np}, score ${wp._score} — team avg ${Math.round(teamAvg)})`;
+      const budget=rem+wp._val;
       
-      // Check if this player's position is over-represented
-      if(pc[wp._np]>(ideal[wp._np]||0)+1 && pn.length){
-        // Can swap to a needed position instead
-        targetPos=pn[0].pos;
-        swapLabel=`Swap ${wp.Player} (surplus ${wp._np}) → fill ${targetPos} gap`;
+      // Option A: Same-position upgrade (always offer)
+      const samePosUp=ALL.filter(p=>p._np===wp._np&&!ROST.some(r=>r._id===p._id)&&p._score>wp._score&&p._val<=budget&&p._val<=PBUDGET)
+        .sort((a,b)=>{const aD=a._score-wp._score,bD=b._score-wp._score;return(bD/Math.max(b._val-wp._val,1))-(aD/Math.max(a._val-wp._val,1))}).slice(0,2);
+      
+      // Option B: Cross-position (fill a gap if one exists)
+      let crossPosUp=[];
+      if(pn.length){
+        const needPos=pn[0].pos;
+        crossPosUp=ALL.filter(p=>p._np===needPos&&!ROST.some(r=>r._id===p._id)&&p._val<=budget&&p._val<=PBUDGET)
+          .sort((a,b)=>b._score-a._score).slice(0,2);
       }
       
-      const candidates=ALL.filter(p=>p._np===targetPos&&!ROST.some(r=>r._id===p._id)&&p._score>wp._score&&p._val<=(rem+wp._val)&&p._val<=PBUDGET)
-        .sort((a,b)=>{
-          // Bang for buck: score improvement per dollar spent
-          const aDelta=a._score-wp._score, bDelta=b._score-wp._score;
-          const aCost=Math.max(a._val-wp._val,1), bCost=Math.max(b._val-wp._val,1);
-          return (bDelta/bCost)-(aDelta/aCost);
-        }).slice(0,3);
-      
-      if(candidates.length)swaps+=`<div style="margin-bottom:.5rem"><div style="font-size:.72rem;font-weight:600;color:var(--t2);margin-bottom:.2rem">🔄 ${swapLabel}:</div>${candidates.map(p=>`<div class="rec"><div class="ri"><div class="rn">${p.Player}</div><div class="rt">${p.Team} · ${p._score} (+${p._score-wp._score}) · Δ$${(p._val-wp._val).toLocaleString()}</div></div>${pbH(p._np)}<span class="vc">$${p._val.toLocaleString()}</span><button class="btn-sw" onclick="event.stopPropagation();swpR(${wp._id},${p._id})">⇄ Swap</button></div>`).join('')}</div>`;
+      if(samePosUp.length||crossPosUp.length){
+        swaps+=`<div style="margin-bottom:.7rem;background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:.8rem"><div style="font-size:.75rem;font-weight:600;margin-bottom:.15rem">🔄 ${wp.Player} <span style="color:var(--t3);font-weight:400">(${wp._np}, score ${wp._score} — team avg ${Math.round(teamAvg)})</span></div>`;
+        
+        if(samePosUp.length){
+          swaps+=`<div style="font-size:.65rem;color:var(--t2);margin:.35rem 0 .2rem">Same position upgrade (${wp._np}):</div>`;
+          swaps+=samePosUp.map(p=>`<div class="rec"><div class="ri"><div class="rn">${p.Player}</div><div class="rt">${p.Team} · ${p._score} (+${p._score-wp._score}) · Δ$${(p._val-wp._val).toLocaleString()}</div></div>${pbH(p._np)}<span class="vc">$${p._val.toLocaleString()}</span><button class="btn-sw" onclick="event.stopPropagation();swpR(${wp._id},${p._id})">⇄ Swap</button></div>`).join('');
+        }
+        
+        if(crossPosUp.length){
+          swaps+=`<div style="font-size:.65rem;color:var(--cy);margin:.35rem 0 .2rem">Fill ${pn[0].pos} gap instead (team needs ${PN[pn[0].pos]}):</div>`;
+          swaps+=crossPosUp.map(p=>`<div class="rec"><div class="ri"><div class="rn">${p.Player}</div><div class="rt">${p.Team} · ${p._score} · Δ$${(p._val-wp._val).toLocaleString()}</div></div>${pbH(p._np)}<span class="vc">$${p._val.toLocaleString()}</span><button class="btn-sw" onclick="event.stopPropagation();swpR(${wp._id},${p._id})">⇄ Swap</button></div>`).join('');
+        }
+        
+        swaps+=`</div>`;
+      }
     }
+    if(!weakPlayers.length&&ROST.length>=5)swaps=`<div style="font-size:.75rem;color:var(--t2);padding:.5rem 0">✅ All roster players are within acceptable range of team average — no swaps recommended.</div>`;
   }
 
   z.innerHTML=`
