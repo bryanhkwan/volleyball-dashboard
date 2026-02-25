@@ -218,6 +218,12 @@ tbody td{padding:.45rem .55rem;white-space:nowrap}
 .chat-quick{display:flex;gap:.3rem;flex-wrap:wrap;padding:0 .6rem .5rem;background:var(--sf)}
 .chat-qb{background:var(--s2);border:1px solid var(--bd);color:var(--t2);padding:.22rem .45rem;border-radius:6px;font-size:.6rem;cursor:pointer;font-family:inherit;white-space:nowrap}
 .chat-qb:hover{border-color:var(--ac);color:var(--ac)}
+.chat-actions{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.5rem}
+.chat-act{padding:.3rem .55rem;border-radius:6px;font-size:.65rem;cursor:pointer;font-family:inherit;font-weight:600;border:1px solid;transition:all .15s}
+.chat-act.confirm{background:var(--gd);color:var(--gn);border-color:var(--gn)}.chat-act.confirm:hover{background:var(--gn);color:#fff}
+.chat-act.reject{background:var(--rdd);color:var(--rd);border-color:var(--rd)}.chat-act.reject:hover{background:var(--rd);color:#fff}
+.chat-act.done{opacity:.5;cursor:default;pointer-events:none}
+.chat-act.info{background:var(--s2);color:var(--ac);border-color:var(--ac)}.chat-act.info:hover{background:var(--ac);color:#fff}
 
 @media(max-width:768px){.pgrid{grid-template-columns:1fr}.cbar,.ogrid,.main,.topbar{padding-left:.7rem;padding-right:.7rem}.chat-panel{width:calc(100vw - 1.5rem);right:.75rem;bottom:4rem;height:calc(100vh - 5rem)}}
 </style>
@@ -265,10 +271,10 @@ tbody td{padding:.45rem .55rem;white-space:nowrap}
   <div class="chat-hd"><h4>🤖 <span>Scout AI</span></h4><button class="btn-s" onclick="chatHist=[];document.getElementById('chatMsgs').innerHTML='';addAiWelcome()" style="font-size:.58rem">Clear</button></div>
   <div class="chat-msgs" id="chatMsgs"></div>
   <div class="chat-quick" id="chatQuick">
-    <button class="chat-qb" onclick="sendChat('How can I improve my roster?')">Improve roster</button>
-    <button class="chat-qb" onclick="sendChat('Who are the top 5 best value players?')">Best value</button>
-    <button class="chat-qb" onclick="sendChat('What positions does my team need?')">Position gaps</button>
-    <button class="chat-qb" onclick="sendChat('Analyze my team strengths and weaknesses')">Team analysis</button>
+    <button class="chat-qb" onclick="sendChat('Analyze my roster and suggest improvements')">Analyze roster</button>
+    <button class="chat-qb" onclick="sendChat('Who are the best value players I should target?')">Best value</button>
+    <button class="chat-qb" onclick="sendChat('What positions does my team need most?')">Position gaps</button>
+    <button class="chat-qb" onclick="sendChat('Build me the best roster under budget')">Auto-build</button>
   </div>
   <div class="chat-inp"><input type="text" id="chatInput" placeholder="Ask about players, strategy, roster..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"><button onclick="sendChat()" id="chatSend">Send</button></div>
 </div>
@@ -848,40 +854,141 @@ function openCompare(id1,id2){
 }
 
 // ═══════════════════════════════════════
-// AI CHAT (Gemini)
+// AI CHAT — JARVIS MODE (Gemini)
 // ═══════════════════════════════════════
 const GEMINI_URL='https://dry-cell-b187.bryanhkwan.workers.dev';
 let chatHist=[];
 let chatOpen=false;
+let pendingActions=[];// Queue of proposed actions awaiting confirmation
+let actionIdCounter=0;
 
 function toggleChat(){chatOpen=!chatOpen;document.getElementById('chatPanel').classList.toggle('open',chatOpen);document.getElementById('chatFab').classList.toggle('has-panel',chatOpen);document.getElementById('chatFab').textContent=chatOpen?'✕':'🤖';if(chatOpen&&!document.getElementById('chatMsgs').children.length)addAiWelcome()}
-function addAiWelcome(){addMsg('ai',`Hey Coach! 👋 I'm <b>Scout AI</b>, your recruiting consultant.\n\nI can help with:\n• <b>Player intel</b> — ask about any player's stats, trends, and history\n• <b>Roster advice</b> — analyze your team and suggest improvements\n• <b>Comparisons</b> — compare players side by side\n• <b>Strategy</b> — position needs, budget optimization, recruiting tips\n\nI have full access to your dashboard data. Try asking me something!`)}
+function addAiWelcome(){addMsg('ai',`Hey Coach! 👋 I'm <b>Scout AI</b> — your interactive recruiting assistant.\n\nI can <b>control your dashboard</b> for you:\n• <b>"Add the entire Toledo roster"</b> → I'll load them into your roster builder\n• <b>"Analyze my team and suggest swaps"</b> → I'll find weaknesses and propose trades\n• <b>"Compare Player A vs Player B"</b> → Side-by-side visual comparison\n• <b>"Increase budget to $300K"</b> → I'll adjust your settings\n• <b>"Show me elite setters"</b> → I'll filter the dashboard\n\nEvery action I propose, you can ✅ approve or ❌ reject. Let's build a championship roster!`)}
 
+// ── ACTION EXECUTION ENGINE ──
+function execAction(actionId){
+  const act=pendingActions.find(a=>a.id===actionId);
+  if(!act||act.done)return;
+  act.done=true;
+  const btn=document.getElementById('abtn-'+actionId);
+  if(btn)btn.innerHTML='<span class="chat-act done">✅ Done</span>';
+
+  switch(act.type){
+    case 'add_player':{
+      const p=ALL.find(x=>x.Player.toLowerCase()===act.name.toLowerCase().trim());
+      if(p&&!ROST.some(r=>r._id===p._id)){if(ROST.length<RSIZE)addR(p._id);}
+      break;}
+    case 'remove_player':{
+      const p=ROST.find(x=>x.Player.toLowerCase()===act.name.toLowerCase().trim());
+      if(p)rmR(p._id);
+      break;}
+    case 'swap':{
+      const pOut=ROST.find(x=>x.Player.toLowerCase()===act.out.toLowerCase().trim());
+      const pIn=ALL.find(x=>x.Player.toLowerCase()===act.inn.toLowerCase().trim());
+      if(pOut&&pIn)swpR(pOut._id,pIn._id);
+      break;}
+    case 'add_team':{
+      const team=act.team.trim();
+      const tp=ALL.filter(p=>p.Team.toLowerCase()===team.toLowerCase()).sort((a,b)=>b._score-a._score);
+      for(const p of tp){if(ROST.length>=RSIZE)break;if(!ROST.some(r=>r._id===p._id)){const spent=ROST.reduce((s,r)=>s+r._val,0);if(p._val<=TBUDGET-spent&&p._val<=PBUDGET)ROST.push(p)}}
+      renderAll();
+      break;}
+    case 'clear_roster':{
+      clearR();
+      break;}
+    case 'set_budget':{
+      TBUDGET=act.value;renderAll();
+      break;}
+    case 'set_max_player':{
+      PBUDGET=act.value;renderAll();
+      break;}
+    case 'set_roster_size':{
+      RSIZE=act.value;renderAll();
+      break;}
+    case 'filter':{
+      applyAiFilter(act.params);
+      break;}
+    case 'open_player':{
+      const p=ALL.find(x=>x.Player.toLowerCase()===act.name.toLowerCase().trim());
+      if(p)openP(p._id);
+      break;}
+    case 'compare':{
+      const p1=ALL.find(x=>x.Player.toLowerCase()===act.p1.toLowerCase().trim());
+      const p2=ALL.find(x=>x.Player.toLowerCase()===act.p2.toLowerCase().trim());
+      if(p1&&p2)openCompare(p1._id,p2._id);
+      break;}
+    case 'switch_tab':{
+      document.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.tp').forEach(x=>x.classList.remove('active'));
+      const tab=document.querySelector(`[data-tab="${act.tab}"]`);
+      const panel=document.getElementById(`p-${act.tab}`);
+      if(tab)tab.classList.add('active');if(panel)panel.classList.add('active');
+      break;}
+  }
+  // Show confirmation in chat
+  addMsg('ai',`✅ Done! ${act.desc||'Action completed.'}`);
+}
+
+function rejectAction(actionId){
+  const act=pendingActions.find(a=>a.id===actionId);
+  if(!act||act.done)return;
+  act.done=true;
+  const btn=document.getElementById('abtn-'+actionId);
+  if(btn)btn.innerHTML='<span class="chat-act done">❌ Skipped</span>';
+}
+
+function execAllPending(){
+  pendingActions.filter(a=>!a.done).forEach(a=>execAction(a.id));
+}
+function rejectAllPending(){
+  pendingActions.filter(a=>!a.done).forEach(a=>rejectAction(a.id));
+}
+
+// ── MESSAGE RENDERING ──
 function addMsg(role,text){
   const c=document.getElementById('chatMsgs');const d=document.createElement('div');d.className='chat-msg '+role;
   if(role==='ai'){
-    // Parse player links [PLAYER:Name] and action commands
-    let html=text.replace(/\[OPEN_PLAYER:([^\]]+)\]/g,(m,name)=>{
-      const p=ALL.find(x=>x.Player.toLowerCase()===name.toLowerCase().trim());
-      return p?`<span class="plink" onclick="openP(${p._id})">${p.Player} (${p._np}, ${p._score})</span>`:name;
-    });
-    html=html.replace(/\[FILTER:([^\]]+)\]/g,(m,params)=>{
-      const parts=Object.fromEntries(params.split(',').map(p=>p.split('=')));
-      return `<span class="plink" onclick="applyAiFilter(${JSON.stringify(parts).replace(/"/g,'&quot;')})">→ Apply filter</span>`;
-    });
-    html=html.replace(/\[ADD_PLAYER:([^\]]+)\]/g,(m,name)=>{
-      const p=ALL.find(x=>x.Player.toLowerCase()===name.toLowerCase().trim());
-      return p?`<span class="plink" onclick="addR(${p._id})">+ Add ${p.Player}</span>`:name;
-    });
-    html=html.replace(/\[COMPARE:([^\]]+)\]/g,(m,names)=>{
-      const parts=names.split('|').map(n=>n.trim());
-      if(parts.length===2){
-        const p1=ALL.find(x=>x.Player.toLowerCase()===parts[0].toLowerCase());
-        const p2=ALL.find(x=>x.Player.toLowerCase()===parts[1].toLowerCase());
-        if(p1&&p2) return `<span class="plink" onclick="openCompare(${p1._id},${p2._id})">⚔️ View ${p1.Player} vs ${p2.Player} comparison</span>`;
+    let html=text;
+    // Parse action tags: [ACTION:type|param1|param2|...|description]
+    html=html.replace(/\[ACTION:([^\]]+)\]/g,(m,content)=>{
+      const parts=content.split('|').map(s=>s.trim());
+      const type=parts[0];
+      const aid=++actionIdCounter;
+      let act=null;let label='';
+
+      switch(type){
+        case 'add_player': act={id:aid,type,name:parts[1],desc:`Added ${parts[1]} to roster`};label=`+ Add ${parts[1]}`;break;
+        case 'remove_player': act={id:aid,type,name:parts[1],desc:`Removed ${parts[1]} from roster`};label=`Remove ${parts[1]}`;break;
+        case 'swap': act={id:aid,type,out:parts[1],inn:parts[2],desc:`Swapped ${parts[1]} → ${parts[2]}`};label=`⇄ Swap ${parts[1]} → ${parts[2]}`;break;
+        case 'add_team': act={id:aid,type,team:parts[1],desc:`Added ${parts[1]} players to roster`};label=`+ Add all ${parts[1]} players`;break;
+        case 'clear_roster': act={id:aid,type,desc:'Cleared roster'};label='Clear roster';break;
+        case 'set_budget': act={id:aid,type,value:parseInt(parts[1]),desc:`Set budget to $${parseInt(parts[1]).toLocaleString()}`};label=`Set budget → $${parseInt(parts[1]).toLocaleString()}`;break;
+        case 'set_max_player': act={id:aid,type,value:parseInt(parts[1]),desc:`Set max/player to $${parseInt(parts[1]).toLocaleString()}`};label=`Set max/player → $${parseInt(parts[1]).toLocaleString()}`;break;
+        case 'set_roster_size': act={id:aid,type,value:parseInt(parts[1]),desc:`Set roster size to ${parts[1]}`};label=`Set roster size → ${parts[1]}`;break;
+        case 'filter': {const fp=Object.fromEntries(parts[1].split(',').map(p=>p.split('=')));act={id:aid,type,params:fp,desc:'Applied filter'};label='→ Apply filter';break;}
+        case 'open_player': act={id:aid,type,name:parts[1],desc:`Opened ${parts[1]}'s profile`};label=`View ${parts[1]}`;break;
+        case 'compare': act={id:aid,type,p1:parts[1],p2:parts[2],desc:`Compared ${parts[1]} vs ${parts[2]}`};label=`⚔️ Compare ${parts[1]} vs ${parts[2]}`;break;
+        case 'switch_tab': act={id:aid,type,tab:parts[1],desc:`Switched to ${parts[1]} tab`};label=`Go to ${parts[1]}`;break;
+        default: return m;
+      }
+
+      if(act){pendingActions.push(act);
+        return `<span id="abtn-${aid}" class="chat-actions"><button class="chat-act confirm" onclick="execAction(${aid})" title="Approve">✅ ${label}</button><button class="chat-act reject" onclick="rejectAction(${aid})" title="Reject">❌</button></span>`;
       }
       return m;
     });
+
+    // Also parse old-style tags for backward compat
+    html=html.replace(/\[OPEN_PLAYER:([^\]]+)\]/g,(m,name)=>{
+      const p=ALL.find(x=>x.Player.toLowerCase()===name.toLowerCase().trim());
+      return p?`<span class="plink" onclick="openP(${p._id})">${p.Player} (${p._np}, ${p._score})</span>`:name;
+    });
+    html=html.replace(/\[COMPARE:([^\]]+)\]/g,(m,names)=>{
+      const pts=names.split('|').map(n=>n.trim());
+      if(pts.length===2){const p1=ALL.find(x=>x.Player.toLowerCase()===pts[0].toLowerCase());const p2=ALL.find(x=>x.Player.toLowerCase()===pts[1].toLowerCase());
+      if(p1&&p2)return `<span class="plink" onclick="openCompare(${p1._id},${p2._id})">⚔️ ${p1.Player} vs ${p2.Player}</span>`}return m;
+    });
+
     html=html.replace(/\n/g,'<br>');
     d.innerHTML=html;
   } else {
@@ -893,155 +1000,148 @@ function addMsg(role,text){
 function applyAiFilter(params){
   if(params.pos)document.getElementById('fp').value=params.pos==='all'?'all':params.pos;
   if(params.tier)document.getElementById('ft').value=params.tier==='all'?'all':params.tier;
-  if(params.search!==undefined){document.getElementById('fs').value=params.search}
+  if(params.search!==undefined)document.getElementById('fs').value=params.search;
   applyF();
-  // Switch to players tab
   document.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.tp').forEach(x=>x.classList.remove('active'));
   document.querySelector('[data-tab="players"]').classList.add('active');
   document.getElementById('p-players').classList.add('active');
 }
 
+// ── CONTEXT BUILDER ──
 function buildContext(userMsg){
-  // Build smart context based on what's being asked
   const lower=userMsg.toLowerCase();
-  let ctx='You are Scout AI, an NCAA women\'s volleyball recruiting consultant embedded in a player valuation dashboard. You help coaches make data-driven recruiting decisions.\n\n';
-  ctx+='IMPORTANT RULES:\n';
-  ctx+='- You have access to the 2025 NCAA D1 volleyball dataset with ~5,000 players.\n';
-  ctx+='- When referencing a player, use [OPEN_PLAYER:Exact Name] so the UI makes it clickable.\n';
-  ctx+='- To suggest adding a player to roster, use [ADD_PLAYER:Exact Name].\n';
-  ctx+='- To suggest filtering the dashboard, use [FILTER:pos=OH,tier=Elite] (params: pos, tier, search).\n';
-  ctx+='- When the user asks to COMPARE two players, you MUST include [COMPARE:Player One Name|Player Two Name] in your response. This opens a side-by-side visual comparison modal. Still provide a brief written summary after the tag.\n';
-  ctx+='- Keep responses concise and actionable — coaches are busy.\n';
-  ctx+='- Use the player data provided, don\'t make up stats. If you don\'t have data on someone, say so.\n';
-  ctx+='- Dollar values are predicted valuations from our model, not actual NIL deals.\n\n';
+  let ctx='You are Scout AI, an NCAA women\'s volleyball recruiting consultant embedded in a player valuation dashboard. You directly control the dashboard for the coach.\n\n';
+  ctx+='═══ ACTION SYSTEM ═══\n';
+  ctx+='You can propose actions using [ACTION:type|params] tags. The coach will see ✅/❌ buttons to approve or reject each action.\n\n';
+  ctx+='Available actions:\n';
+  ctx+='[ACTION:add_player|Exact Player Name] — Add a player to the roster\n';
+  ctx+='[ACTION:remove_player|Exact Player Name] — Remove a player from the roster\n';
+  ctx+='[ACTION:swap|Player To Remove|Player To Add] — Swap one roster player for another\n';
+  ctx+='[ACTION:add_team|Exact Team Name] — Add all players from a school/team (respects budget and roster size)\n';
+  ctx+='[ACTION:clear_roster] — Clear the entire roster\n';
+  ctx+='[ACTION:set_budget|Amount] — Change team budget (e.g., [ACTION:set_budget|300000])\n';
+  ctx+='[ACTION:set_max_player|Amount] — Change max per-player budget\n';
+  ctx+='[ACTION:set_roster_size|Number] — Change roster size limit\n';
+  ctx+='[ACTION:filter|pos=OH,tier=Elite] — Filter the player list\n';
+  ctx+='[ACTION:open_player|Exact Player Name] — Open a player\'s profile\n';
+  ctx+='[ACTION:compare|Player 1|Player 2] — Open side-by-side comparison\n';
+  ctx+='[ACTION:switch_tab|roster] — Switch dashboard tab (players/positions/roster/weights/valuation/methodology)\n\n';
+  ctx+='CRITICAL RULES:\n';
+  ctx+='- ALWAYS use [ACTION:...] tags for any action you propose. The coach must approve each one.\n';
+  ctx+='- Use exact player names from the data. If a name has special characters, use them.\n';
+  ctx+='- If multiple actions are needed (e.g., adding a whole team), list them all so the coach can approve all at once.\n';
+  ctx+='- If the budget or roster size is too small, FIRST propose the settings change, THEN the roster changes.\n';
+  ctx+='- When recommending swaps, explain WHY with specific stats before the action tag.\n';
+  ctx+='- You can also use [OPEN_PLAYER:Name] inline to make player names clickable without proposing an action.\n';
+  ctx+='- Dollar values are predicted valuations from our model, not actual NIL deals.\n';
+  ctx+='- Keep responses concise — coaches are busy. Put reasoning BEFORE action tags.\n';
+  ctx+='- When asked to add a team, use [ACTION:add_team|Team Name] which adds all players from that school automatically.\n\n';
 
-  // Roster context
+  // Dashboard state
+  ctx+=`═══ DASHBOARD STATE ═══\n`;
+  ctx+=`Team Budget: $${TBUDGET.toLocaleString()} | Max/Player: $${PBUDGET.toLocaleString()} | Roster Size Limit: ${RSIZE}\n`;
+
   if(ROST.length){
     const spent=ROST.reduce((s,p)=>s+p._val,0);
-    const pc2={OH:0,MB:0,S:0,'L/DS':0,OPP:0};ROST.forEach(p=>pc2[p._np]++);
-    ctx+=`CURRENT ROSTER (${ROST.length} players, $${spent.toLocaleString()} spent, $${(TBUDGET-spent).toLocaleString()} remaining, budget $${TBUDGET.toLocaleString()}):\n`;
-    ctx+=`Position counts: ${Object.entries(pc2).map(([p,c])=>`${p}:${c}`).join(', ')} (ideal: OH:3 MB:2 S:1 L/DS:2 OPP:1)\n`;
-    ROST.forEach(p=>{ctx+=`- ${p.Player} | ${p._np} | ${p.Team} | Score:${p._score} | Tier:${p._tier} | $${p._val.toLocaleString()} | K/S:${p._kps} Hit%:${(p['Hit %']||0).toFixed(3)} D/S:${p._dps} A/S:${p._aps} B/S:${p._bps}\n`});
-    
+    const posC={OH:0,MB:0,S:0,'L/DS':0,OPP:0};ROST.forEach(p=>posC[p._np]++);
+    ctx+=`\nCURRENT ROSTER (${ROST.length}/${RSIZE} players, $${spent.toLocaleString()} spent, $${(TBUDGET-spent).toLocaleString()} remaining):\n`;
+    ctx+=`Position counts: ${Object.entries(posC).map(([p,c])=>`${p}:${c}`).join(', ')} (ideal: OH:3 MB:2 S:1 L/DS:2 OPP:1)\n`;
+    const teamAvg=Math.round(ROST.reduce((s,p)=>s+p._score,0)/ROST.length);
+    ctx+=`Team average score: ${teamAvg}\n`;
+    ROST.forEach(p=>{ctx+=`  ${p.Player} | ${p._np} | ${p.Team} | Score:${p._score} | ${p._tier} | $${p._val.toLocaleString()} | K/S:${p._kps} Hit%:${(p['Hit %']||0).toFixed(3)} D/S:${p._dps} A/S:${p._aps} B/S:${p._bps} Ace/S:${p._acps}\n`});
     // Team profile
     const cats2={offense:['kills_per_set','hit_pct','pts_per_set'],defense:['digs_per_set'],blocking:['blk_per_set'],serving:['aces_per_set']};
     const cs2={};for(const[cat,stats]of Object.entries(cats2)){let t=0,c=0;for(const p of ROST){const sp=gSP(p,PCT);for(const st of stats){if(sp[st]){t+=sp[st].pctile;c++}}}cs2[cat]=c?Math.round(t/c):50}
-    ctx+=`Team profile: ${Object.entries(cs2).map(([c,s])=>`${c}:${s}th`).join(', ')}\n\n`;
+    ctx+=`Team strengths: ${Object.entries(cs2).map(([c,s])=>`${c}:${s}th`).join(', ')}\n\n`;
   } else {
-    ctx+='NO ROSTER BUILT YET. Coach hasn\'t added players to roster.\n\n';
+    ctx+='ROSTER: Empty — no players added yet.\n\n';
   }
 
-  // Player-specific context — find mentioned players
-  const playerNames=ALL.map(p=>p.Player);
-  const mentioned=[];
-  for(const p of ALL){
-    if(lower.includes(p.Player.toLowerCase())||lower.includes(p.Player.split(' ').pop().toLowerCase())){
-      mentioned.push(p);
+  // Team-specific context if asking about a team
+  const teamMatches=ALL.reduce((acc,p)=>{if(!acc[p.Team])acc[p.Team]=[];acc[p.Team].push(p);return acc},{});
+  for(const[team,players]of Object.entries(teamMatches)){
+    if(lower.includes(team.toLowerCase())){
+      const sorted=[...players].sort((a,b)=>b._score-a._score);
+      const totalVal=sorted.reduce((s,p)=>s+p._val,0);
+      ctx+=`\n${team.toUpperCase()} PLAYERS (${sorted.length} total, combined value $${totalVal.toLocaleString()}):\n`;
+      sorted.forEach(p=>{ctx+=`  ${p.Player} | ${p._np} | Score:${p._score} | ${p._tier} | $${p._val.toLocaleString()} | K/S:${p._kps} Hit%:${(p['Hit %']||0).toFixed(3)} D/S:${p._dps} A/S:${p._aps} B/S:${p._bps}\n`});
+      ctx+='\n';
+      break; // Only include one team's full roster to save tokens
     }
   }
-  // Also add top players for general questions
-  const topN=[...ALL].sort((a,b)=>b._score-a._score).slice(0,15);
+
+  // Player-specific context
+  const mentioned=[];
+  for(const p of ALL){
+    const pLow=p.Player.toLowerCase();const last=p.Player.split(' ').pop().toLowerCase();
+    if(lower.includes(pLow)||(last.length>3&&lower.includes(last)))mentioned.push(p);
+  }
+  const topN=[...ALL].sort((a,b)=>b._score-a._score).slice(0,10);
   const relevant=[...new Map([...mentioned,...topN].map(p=>[p._id,p])).values()];
-  
   if(relevant.length){
     ctx+='RELEVANT PLAYERS:\n';
-    relevant.forEach(p=>{
-      const hist2=HIST[p.Player];const histStr=hist2&&hist2.length>1?` | History: ${hist2.map(h=>`${h.Season}@${h.Team}`).join(' → ')}`:'';
-      ctx+=`- ${p.Player} | ${p._np} | ${p.Team} | Score:${p._score}/100 | Tier:${p._tier} | $${p._val.toLocaleString()} | K/S:${p._kps} Hit%:${(p['Hit %']||0).toFixed(3)} D/S:${p._dps} A/S:${p._aps} B/S:${p._bps} Ace/S:${p._acps} | Sets:${p.Sets} | Tags:${p._tags.map(t=>t.t).join(',')||'none'}${histStr}\n`;
+    relevant.slice(0,25).forEach(p=>{
+      const hist2=HIST[p.Player];const histStr=hist2&&hist2.length>1?` | History: ${hist2.map(h=>`${h.Season}@${h.Team}`).join('→')}`:'';
+      ctx+=`  ${p.Player} | ${p._np} | ${p.Team} | Score:${p._score} | ${p._tier} | $${p._val.toLocaleString()} | K/S:${p._kps} Hit%:${(p['Hit %']||0).toFixed(3)} D/S:${p._dps} A/S:${p._aps} B/S:${p._bps} Ace/S:${p._acps} | Sets:${p.Sets}${histStr}\n`;
     });
   }
 
-  // Position-specific context if asking about a position
+  // Position-specific context
   for(const[pos,name]of Object.entries(PN)){
     if(lower.includes(pos.toLowerCase())||lower.includes(name.toLowerCase())){
       const top5=[...ALL].filter(p=>p._np===pos).sort((a,b)=>b._score-a._score).slice(0,8);
       ctx+=`\nTOP ${pos} (${name}):\n`;
-      top5.forEach(p=>{ctx+=`- ${p.Player} | ${p.Team} | Score:${p._score} | $${p._val.toLocaleString()} | K/S:${p._kps} D/S:${p._dps} B/S:${p._bps}\n`});
+      top5.forEach(p=>{ctx+=`  ${p.Player} | ${p.Team} | Score:${p._score} | $${p._val.toLocaleString()} | K/S:${p._kps} D/S:${p._dps} B/S:${p._bps}\n`});
     }
   }
 
   return ctx;
 }
 
+// ── SEND MESSAGE ──
 async function sendChat(preset){
   const inp=document.getElementById('chatInput');
   const msg=preset||inp.value.trim();
   if(!msg)return;
   inp.value='';addMsg('user',msg);
   document.getElementById('chatSend').disabled=true;
-  
-  // Show typing indicator
+
   const typing=document.createElement('div');typing.className='chat-typing';typing.textContent='Scout AI is thinking...';
   document.getElementById('chatMsgs').appendChild(typing);
   document.getElementById('chatMsgs').scrollTop=document.getElementById('chatMsgs').scrollHeight;
-  
-  // Build messages
+
   const sysCtx=buildContext(msg);
   const contents=[];
-  // System context as first user message
-  contents.push({role:'user',parts:[{text:sysCtx+'\n\nThe coach says: "'+msg+'"'}]});
-  // Add history (last 8 turns max)
-  const recentHist=chatHist.slice(-8);
+  const recentHist=chatHist.slice(-10);
   if(recentHist.length){
-    // Reconstruct conversation
-    contents.length=0;
     contents.push({role:'user',parts:[{text:sysCtx}]});
-    contents.push({role:'model',parts:[{text:'Understood. I\'m Scout AI with full dashboard access. How can I help, Coach?'}]});
-    for(const h of recentHist){
-      contents.push({role:h.role==='user'?'user':'model',parts:[{text:h.text}]});
-    }
+    contents.push({role:'model',parts:[{text:'Ready to help, Coach. I can control the dashboard directly — just tell me what you need and I\'ll propose actions for your approval.'}]});
+    for(const h of recentHist)contents.push({role:h.role==='user'?'user':'model',parts:[{text:h.text}]});
     contents.push({role:'user',parts:[{text:msg}]});
+  } else {
+    contents.push({role:'user',parts:[{text:sysCtx+'\n\nThe coach says: "'+msg+'"'}]});
   }
-  
   chatHist.push({role:'user',text:msg});
-  
+
   try{
-    const resp=await fetch(GEMINI_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents,generationConfig:{maxOutputTokens:1024,temperature:0.7}})
-    });
+    const resp=await fetch(GEMINI_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents,generationConfig:{maxOutputTokens:2048,temperature:0.7}})});
     const data=await resp.json();
     typing.remove();
-    
+
     if(data.candidates&&data.candidates[0]&&data.candidates[0].content){
       const aiText=data.candidates[0].content.parts.map(p=>p.text).join('');
       chatHist.push({role:'ai',text:aiText});
       addMsg('ai',aiText);
-      
-      // Execute any action commands
-      const openMatches=[...aiText.matchAll(/\[OPEN_PLAYER:([^\]]+)\]/g)];
-      // Auto-open if exactly one player mentioned and it's a specific lookup
-      if(openMatches.length===1&&(msg.toLowerCase().includes('show me')||msg.toLowerCase().includes('pull up')||msg.toLowerCase().includes('open'))){
-        const p=ALL.find(x=>x.Player.toLowerCase()===openMatches[0][1].toLowerCase().trim());
-        if(p)setTimeout(()=>openP(p._id),500);
-      }
-      
-      // Auto-open comparison modal
-      const compareMatches=[...aiText.matchAll(/\[COMPARE:([^\]]+)\]/g)];
-      if(compareMatches.length){
-        const parts=compareMatches[0][1].split('|').map(n=>n.trim());
-        if(parts.length===2){
-          const cp1=ALL.find(x=>x.Player.toLowerCase()===parts[0].toLowerCase());
-          const cp2=ALL.find(x=>x.Player.toLowerCase()===parts[1].toLowerCase());
-          if(cp1&&cp2)setTimeout(()=>openCompare(cp1._id,cp2._id),600);
-        }
-      }
-      
-      const filterMatches=[...aiText.matchAll(/\[FILTER:([^\]]+)\]/g)];
-      if(filterMatches.length===1&&(msg.toLowerCase().includes('show me')||msg.toLowerCase().includes('filter')||msg.toLowerCase().includes('find'))){
-        const params=Object.fromEntries(filterMatches[0][1].split(',').map(p=>p.split('=')));
-        setTimeout(()=>applyAiFilter(params),500);
-      }
     } else if(data.error){
-      addMsg('ai','Sorry, I hit an error: '+data.error.message);
+      addMsg('ai','Error: '+(data.error.message||JSON.stringify(data.error)));
     } else {
-      addMsg('ai','Hmm, I didn\'t get a response. Try again?');
+      addMsg('ai','No response received. Try rephrasing your question.');
     }
   }catch(err){
     typing.remove();
-    addMsg('ai','Connection error: '+err.message+'. Check your internet connection.');
+    addMsg('ai','Connection error: '+err.message);
   }
   document.getElementById('chatSend').disabled=false;
   inp.focus();
