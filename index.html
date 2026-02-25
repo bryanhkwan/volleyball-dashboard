@@ -995,7 +995,8 @@ async function sendChat(preset){
   }
   
   chatHist.push({role:'user',text:msg});
-  
+
+  const GEMINI_PROXY_URL = "https://dry-cell-b187.bryanhkwan.workers.dev";
   try{
     const resp = await fetch(GEMINI_PROXY_URL, {
   method: 'POST',
