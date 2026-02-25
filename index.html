@@ -93,12 +93,25 @@ tbody td{padding:.45rem .55rem;white-space:nowrap}
 .mo{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:500;overflow-y:auto;padding:1.5rem}
 .mo.show{display:flex;justify-content:center;align-items:flex-start;animation:fadeIn .15s}
 .modal{background:var(--bg);border:1px solid var(--bd);border-radius:15px;width:100%;max-width:860px;margin:auto;position:relative;animation:fadeUp .25s ease-out}
+.modal.wide{max-width:1050px}
 .mcl{position:absolute;top:.7rem;right:.7rem;background:var(--s2);border:1px solid var(--bd);color:var(--t2);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;z-index:10}
 .mcl:hover{border-color:var(--rd);color:var(--rd)}
 .mhd{padding:1.3rem 1.3rem .7rem;border-bottom:1px solid var(--bd)}.mbd{padding:1.1rem 1.3rem 1.3rem}
 .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
 .psec{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:1rem}
 .psec h4{font-size:.78rem;font-weight:600;margin-bottom:.6rem}.psec.full{grid-column:1/-1}
+.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.cmp-col{padding:1rem}
+.cmp-col:first-child{border-right:1px solid var(--bd)}
+.cmp-hd{text-align:center;padding-bottom:.6rem;border-bottom:1px solid var(--bd);margin-bottom:.6rem}
+.cmp-hd .cname{font-size:1rem;font-weight:700}.cmp-hd .csub{font-size:.7rem;color:var(--t2);margin-top:.15rem}
+.cmp-row{display:flex;align-items:center;padding:.25rem 0;font-size:.72rem}
+.cmp-row .cl{color:var(--t2);min-width:65px;font-size:.62rem;text-transform:uppercase}
+.cmp-row .cv{flex:1;text-align:center;font-family:'Space Mono',monospace;font-weight:700;font-size:.75rem}
+.cmp-row .cb{flex:1;height:5px;background:var(--s3);border-radius:3px;overflow:hidden;margin:0 .3rem}
+.cmp-row .cf{height:100%;border-radius:3px}
+.cmp-vs{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.6rem;font-size:.78rem;font-weight:600;border-bottom:1px solid var(--bd)}
+.cmp-win{color:var(--gn);font-size:.58rem;font-weight:700;margin-left:.2rem}
 
 /* TOOLTIP */
 .ttpop{display:none;position:fixed;z-index:600;background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:.9rem;max-width:310px;box-shadow:0 8px 32px rgba(0,0,0,.5);animation:fadeUp .15s}
@@ -162,6 +175,25 @@ tbody td{padding:.45rem .55rem;white-space:nowrap}
 .btn-sel:hover{background:var(--bl);color:#fff}
 
 /* AI CHAT */
+.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.cmp-col{padding:.8rem}
+.cmp-col:first-child{border-right:1px solid var(--bd)}
+.cmp-hdr{text-align:center;padding-bottom:.6rem;border-bottom:1px solid var(--bd);margin-bottom:.6rem}
+.cmp-hdr .cmp-name{font-size:1rem;font-weight:700}.cmp-hdr .cmp-sub{font-size:.7rem;color:var(--t2);margin-top:.15rem}
+.cmp-score{text-align:center;margin-bottom:.6rem}
+.cmp-score .big{font-family:'Space Mono',monospace;font-size:2rem;font-weight:700}
+.cmp-score .val{font-family:'Space Mono',monospace;font-size:1rem;font-weight:700;color:var(--gn)}
+.cmp-row{display:flex;align-items:center;padding:.25rem 0;font-size:.72rem}
+.cmp-row .cmp-lbl{width:65px;color:var(--t3);font-size:.6rem;text-transform:uppercase;flex-shrink:0}
+.cmp-row .cmp-bar{flex:1;height:5px;background:var(--s3);border-radius:3px;overflow:hidden;margin:0 .4rem}
+.cmp-row .cmp-bf{height:100%;border-radius:3px}
+.cmp-row .cmp-v{font-family:'Space Mono',monospace;font-size:.68rem;font-weight:700;min-width:30px;text-align:right}
+.cmp-win{background:rgba(34,197,94,.08);border-radius:4px;padding:.05rem .2rem}
+.cmp-tags{display:flex;flex-wrap:wrap;gap:.15rem;margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--bd)}
+.cmp-verdict{grid-column:1/-1;padding:.8rem;border-top:1px solid var(--bd);background:var(--sf)}
+.cmp-verdict h4{font-size:.8rem;font-weight:600;margin-bottom:.3rem}
+.cmp-verdict p{font-size:.72rem;color:var(--t2);line-height:1.5}
+@media(max-width:600px){.cmp-grid{grid-template-columns:1fr}.cmp-col:first-child{border-right:none;border-bottom:1px solid var(--bd)}}
 .chat-fab{position:fixed;bottom:1.2rem;right:1.2rem;width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,var(--ac),var(--ac2));border:none;color:#fff;font-size:1.3rem;cursor:pointer;z-index:300;box-shadow:0 4px 20px rgba(249,115,22,.35);display:flex;align-items:center;justify-content:center;transition:transform .15s}
 .chat-fab:hover{transform:scale(1.08)}.chat-fab.has-panel{background:var(--rd)}
 .chat-panel{display:none;position:fixed;bottom:4.5rem;right:1.2rem;width:380px;max-width:calc(100vw - 2rem);height:520px;max-height:calc(100vh - 6rem);background:var(--bg);border:1px solid var(--bd);border-radius:14px;z-index:300;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.6);animation:fadeUp .2s}
@@ -225,6 +257,7 @@ tbody td{padding:.45rem .55rem;white-space:nowrap}
   </div>
 </div>
 <div class="mo" id="pm"><div class="modal"><button class="mcl" onclick="closeM()">✕</button><div class="mhd" id="mh"></div><div class="mbd" id="mb"></div></div></div>
+<div class="mo" id="cm"><div class="modal" style="max-width:960px"><button class="mcl" onclick="closeCM()">✕</button><div class="mhd" id="cmh"></div><div class="mbd" id="cmb"></div></div></div>
 <div class="ttpop" id="ttp"><button class="ctt" onclick="closeTT()">✕</button><h5 id="ttt"></h5><p id="ttb"></p></div>
 
 <button class="chat-fab" id="chatFab" onclick="toggleChat()" title="AI Assistant">🤖</button>
@@ -745,6 +778,76 @@ function renderMeth(){const g=document.getElementById('mz');g.style.cssText='dis
   h+=`<div style="background:var(--sf);border:1px solid var(--bd);border-radius:11px;padding:1rem"><h4 style="font-size:.8rem;font-weight:600;margin-bottom:.4rem"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--yw);margin-right:.3rem"></span>Sets Adjustment</h4><p style="font-size:.72rem;color:var(--t2);line-height:1.5">Players with fewer sets get a valuation discount to prevent inflation. A player with 25 sets who averages 4.0 K/S looks amazing, but we can't trust that small sample like someone who sustained it over 110 sets.<br><br>Formula: <code style="background:var(--s3);padding:.1rem .2rem;border-radius:3px;font-size:.62rem">√(min(1, sets / p90_sets))</code><br>At p90 ≈ 112 sets: 50 sets → 67% valuation, 80 sets → 85%, 112+ → 100%.</p></div>`;
   g.innerHTML=h}
 // ═══════════════════════════════════════
+// COMPARISON MODAL
+// ═══════════════════════════════════════
+function closeCM(){document.getElementById('cm').classList.remove('show')}
+
+function openCompare(id1,id2){
+  const p1=typeof id1==='number'?ALL.find(x=>x._id===id1):ALL.find(x=>x.Player.toLowerCase()===id1.toLowerCase().trim());
+  const p2=typeof id2==='number'?ALL.find(x=>x._id===id2):ALL.find(x=>x.Player.toLowerCase()===id2.toLowerCase().trim());
+  if(!p1||!p2)return;
+  const s1=gSP(p1,PCT),s2=gSP(p2,PCT);
+
+  function sc(v){return v>=82?'var(--yw)':v>=65?'var(--gn)':v>=45?'var(--bl)':v>=28?'var(--pu)':'var(--rd)'}
+
+  // All stats to compare
+  const statKeys=Object.keys({...s1,...s2});
+  function statRows(stats,other){
+    return statKeys.map(st=>{
+      if(!stats[st])return'';
+      const v=stats[st].pctile;const ov=other[st]?other[st].pctile:0;
+      const win=v>ov;const c=v>=80?'var(--yw)':v>=60?'var(--gn)':v>=40?'var(--bl)':v>=20?'var(--pu)':'var(--rd)';
+      return `<div class="cmp-row"><span class="cmp-lbl">${SI[st]?.n||st}</span><div class="cmp-bar"><div class="cmp-bf" style="width:${v}%;background:${c}"></div></div><span class="cmp-v ${win?'cmp-win':''}" style="color:${c}">${v}%</span></div>`;
+    }).join('');
+  }
+
+  function rawStats(p){
+    return [['K/S',p._kps],['Hit%',(p['Hit %']||0).toFixed(3)],['D/S',p._dps],['A/S',p._aps],['B/S',p._bps],['Ace/S',p._acps],['PTS/S',p._pps],['Sets',p.Sets]]
+      .map(([l,v])=>`<span style="font-size:.62rem;color:var(--t3)">${l}:</span> <span class="mono" style="font-size:.66rem">${v}</span>`).join(' &nbsp;');
+  }
+
+  // Verdict
+  const diff=p1._score-p2._score;
+  let verdict='';
+  if(Math.abs(diff)<=5)verdict=`Very close matchup — only ${Math.abs(diff)} points apart. Decision should come down to team needs and fit.`;
+  else if(diff>0)verdict=`<b>${p1.Player}</b> scores ${diff} points higher overall. `;
+  else verdict=`<b>${p2.Player}</b> scores ${Math.abs(diff)} points higher overall. `;
+
+  // Find what each player wins
+  const p1wins=[],p2wins=[];
+  for(const st of statKeys){
+    if(s1[st]&&s2[st]){
+      if(s1[st].pctile>s2[st].pctile+8)p1wins.push(SI[st]?.n||st);
+      if(s2[st].pctile>s1[st].pctile+8)p2wins.push(SI[st]?.n||st);
+    }
+  }
+  if(p1wins.length)verdict+=`${p1.Player} is better at ${p1wins.join(', ')}. `;
+  if(p2wins.length)verdict+=`${p2.Player} is better at ${p2wins.join(', ')}. `;
+  if(p1._val!==p2._val)verdict+=`Value difference: $${Math.abs(p1._val-p2._val).toLocaleString()} (${p1._val<p2._val?p1.Player:p2.Player} is cheaper).`;
+
+  document.getElementById('cmh').innerHTML=`<div style="font-size:1rem;font-weight:700">⚔️ Player Comparison</div><div style="font-size:.72rem;color:var(--t2);margin-top:.15rem">Side-by-side percentile comparison scored against 2025 ${p1._np===p2._np?p1._np+' peers':'all positions'}</div>`;
+
+  document.getElementById('cmb').innerHTML=`<div class="cmp-grid">
+    <div class="cmp-col">
+      <div class="cmp-hdr"><div style="display:flex;align-items:center;justify-content:center;gap:.3rem;margin-bottom:.2rem">${pbH(p1._np)} ${tbH(p1._tier)}</div><div class="cmp-name">${p1.Player}</div><div class="cmp-sub">${p1.Team}</div><div style="margin-top:.15rem;font-size:.62rem;color:var(--t3)">${rawStats(p1)}</div></div>
+      <div class="cmp-score"><div class="big" style="color:${sc(p1._score)}">${p1._score}</div><div class="val">$${p1._val.toLocaleString()}</div></div>
+      ${statRows(s1,s2)}
+      <div class="cmp-tags">${tagHH(p1._tags,true)}</div>
+    </div>
+    <div class="cmp-col">
+      <div class="cmp-hdr"><div style="display:flex;align-items:center;justify-content:center;gap:.3rem;margin-bottom:.2rem">${pbH(p2._np)} ${tbH(p2._tier)}</div><div class="cmp-name">${p2.Player}</div><div class="cmp-sub">${p2.Team}</div><div style="margin-top:.15rem;font-size:.62rem;color:var(--t3)">${rawStats(p2)}</div></div>
+      <div class="cmp-score"><div class="big" style="color:${sc(p2._score)}">${p2._score}</div><div class="val">$${p2._val.toLocaleString()}</div></div>
+      ${statRows(s2,s1)}
+      <div class="cmp-tags">${tagHH(p2._tags,true)}</div>
+    </div>
+    <div class="cmp-verdict"><h4>📊 Verdict</h4><p>${verdict}</p><div style="margin-top:.5rem;display:flex;gap:.3rem"><button class="btn-s" onclick="closeCM();openP(${p1._id})">View ${p1.Player.split(' ')[0]}'s Profile</button><button class="btn-s" onclick="closeCM();openP(${p2._id})">View ${p2.Player.split(' ')[0]}'s Profile</button></div></div>
+  </div>`;
+
+  document.getElementById('cm').classList.add('show');
+  document.getElementById('cm').onclick=e=>{if(e.target===document.getElementById('cm'))closeCM()};
+}
+
+// ═══════════════════════════════════════
 // AI CHAT (Gemini)
 // ═══════════════════════════════════════
 const GEMINI_KEY='AIzaSyD2X8Z0GHXvX-Laq7cCDhyO0Vn-pj1BEzE';
@@ -770,6 +873,15 @@ function addMsg(role,text){
     html=html.replace(/\[ADD_PLAYER:([^\]]+)\]/g,(m,name)=>{
       const p=ALL.find(x=>x.Player.toLowerCase()===name.toLowerCase().trim());
       return p?`<span class="plink" onclick="addR(${p._id})">+ Add ${p.Player}</span>`:name;
+    });
+    html=html.replace(/\[COMPARE:([^\]]+)\]/g,(m,names)=>{
+      const parts=names.split('|').map(n=>n.trim());
+      if(parts.length===2){
+        const p1=ALL.find(x=>x.Player.toLowerCase()===parts[0].toLowerCase());
+        const p2=ALL.find(x=>x.Player.toLowerCase()===parts[1].toLowerCase());
+        if(p1&&p2) return `<span class="plink" onclick="openCompare(${p1._id},${p2._id})">⚔️ View ${p1.Player} vs ${p2.Player} comparison</span>`;
+      }
+      return m;
     });
     html=html.replace(/\n/g,'<br>');
     d.innerHTML=html;
@@ -800,6 +912,7 @@ function buildContext(userMsg){
   ctx+='- When referencing a player, use [OPEN_PLAYER:Exact Name] so the UI makes it clickable.\n';
   ctx+='- To suggest adding a player to roster, use [ADD_PLAYER:Exact Name].\n';
   ctx+='- To suggest filtering the dashboard, use [FILTER:pos=OH,tier=Elite] (params: pos, tier, search).\n';
+  ctx+='- When the user asks to COMPARE two players, you MUST include [COMPARE:Player One Name|Player Two Name] in your response. This opens a side-by-side visual comparison modal. Still provide a brief written summary after the tag.\n';
   ctx+='- Keep responses concise and actionable — coaches are busy.\n';
   ctx+='- Use the player data provided, don\'t make up stats. If you don\'t have data on someone, say so.\n';
   ctx+='- Dollar values are predicted valuations from our model, not actual NIL deals.\n\n';
@@ -904,6 +1017,17 @@ async function sendChat(preset){
       if(openMatches.length===1&&(msg.toLowerCase().includes('show me')||msg.toLowerCase().includes('pull up')||msg.toLowerCase().includes('open'))){
         const p=ALL.find(x=>x.Player.toLowerCase()===openMatches[0][1].toLowerCase().trim());
         if(p)setTimeout(()=>openP(p._id),500);
+      }
+      
+      // Auto-open comparison modal
+      const compareMatches=[...aiText.matchAll(/\[COMPARE:([^\]]+)\]/g)];
+      if(compareMatches.length){
+        const parts=compareMatches[0][1].split('|').map(n=>n.trim());
+        if(parts.length===2){
+          const cp1=ALL.find(x=>x.Player.toLowerCase()===parts[0].toLowerCase());
+          const cp2=ALL.find(x=>x.Player.toLowerCase()===parts[1].toLowerCase());
+          if(cp1&&cp2)setTimeout(()=>openCompare(cp1._id,cp2._id),600);
+        }
       }
       
       const filterMatches=[...aiText.matchAll(/\[FILTER:([^\]]+)\]/g)];
