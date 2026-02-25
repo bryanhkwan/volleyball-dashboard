@@ -592,7 +592,6 @@ function renderRost(){
   if(ROST.length>=5){
     const teamAvg=ROST.reduce((s,p)=>s+p._score,0)/ROST.length;
     const swapThreshold=teamAvg*0.75;
-    // Eligible for swap: below threshold AND not already swapped in via recommendation
     const weakPlayers=[...ROST].filter(p=>p._score<swapThreshold&&!SWAPPED.has(p._id)).sort((a,b)=>a._score-b._score).slice(0,2);
     
     for(const wp of weakPlayers){
@@ -602,12 +601,29 @@ function renderRost(){
       const samePosUp=ALL.filter(p=>p._np===wp._np&&!ROST.some(r=>r._id===p._id)&&p._score>wp._score&&p._val<=budget&&p._val<=PBUDGET)
         .sort((a,b)=>{const aD=a._score-wp._score,bD=b._score-wp._score;return(bD/Math.max(b._val-wp._val,1))-(aD/Math.max(a._val-wp._val,1))}).slice(0,2);
       
-      // Option B: Cross-position (fill a gap if one exists)
+      // Option B: Cross-position — find best alternative position to swap into
+      // Priority: positions with formal gaps (pn), then any position where team has fewer than ideal
       let crossPosUp=[];
-      if(pn.length){
-        const needPos=pn[0].pos;
-        crossPosUp=ALL.filter(p=>p._np===needPos&&!ROST.some(r=>r._id===p._id)&&p._val<=budget&&p._val<=PBUDGET)
+      let crossLabel='';
+      const wpPosCount=pc[wp._np]||0;
+      const wpPosIdeal=ideal[wp._np]||0;
+      
+      // Build list of positions worth swapping to (sorted by need)
+      const altPositions=[];
+      // First: positions with formal gaps
+      for(const n of pn) altPositions.push({pos:n.pos,reason:`team needs ${n.need-n.have} more ${PN[n.pos]}`});
+      // Second: if this player's position is overloaded, suggest any position at or below ideal count
+      if(wpPosCount>wpPosIdeal&&!altPositions.length){
+        for(const[pos,id] of Object.entries(ideal)){
+          if(pos!==wp._np&&(pc[pos]||0)<=id) altPositions.push({pos,reason:`balance roster (${pos}: ${pc[pos]||0}/${id})`});
+        }
+      }
+      
+      if(altPositions.length){
+        const best=altPositions[0];
+        crossPosUp=ALL.filter(p=>p._np===best.pos&&!ROST.some(r=>r._id===p._id)&&p._val<=budget&&p._val<=PBUDGET)
           .sort((a,b)=>b._score-a._score).slice(0,2);
+        crossLabel=`Switch to ${best.pos} instead (${best.reason})`;
       }
       
       if(samePosUp.length||crossPosUp.length){
@@ -619,7 +635,7 @@ function renderRost(){
         }
         
         if(crossPosUp.length){
-          swaps+=`<div style="font-size:.65rem;color:var(--cy);margin:.35rem 0 .2rem">Fill ${pn[0].pos} gap instead (team needs ${PN[pn[0].pos]}):</div>`;
+          swaps+=`<div style="font-size:.65rem;color:var(--cy);margin:.35rem 0 .2rem">💡 ${crossLabel}:</div>`;
           swaps+=crossPosUp.map(p=>`<div class="rec"><div class="ri"><div class="rn">${p.Player}</div><div class="rt">${p.Team} · ${p._score} · Δ$${(p._val-wp._val).toLocaleString()}</div></div>${pbH(p._np)}<span class="vc">$${p._val.toLocaleString()}</span><button class="btn-sw" onclick="event.stopPropagation();swpR(${wp._id},${p._id})">⇄ Swap</button></div>`).join('');
         }
         
