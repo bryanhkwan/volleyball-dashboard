@@ -850,7 +850,7 @@ function openCompare(id1,id2){
 // ═══════════════════════════════════════
 // AI CHAT (Gemini)
 // ═══════════════════════════════════════
-const GEMINI_PROXY_URL = '/api/gemini';
+const GEMINI_URL='https://dry-cell-b187.bryanhkwan.workers.dev';
 let chatHist=[];
 let chatOpen=false;
 
@@ -995,17 +995,13 @@ async function sendChat(preset){
   }
   
   chatHist.push({role:'user',text:msg});
-
-  const GEMINI_PROXY_URL = "https://dry-cell-b187.bryanhkwan.workers.dev";
+  
   try{
-    const resp = await fetch(GEMINI_PROXY_URL, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    contents,
-    generationConfig: { maxOutputTokens: 1024, temperature: 0.7 }
-  })
-});
+    const resp=await fetch(GEMINI_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents,generationConfig:{maxOutputTokens:1024,temperature:0.7}})
+    });
     const data=await resp.json();
     typing.remove();
     
