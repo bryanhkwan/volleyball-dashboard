@@ -97,6 +97,17 @@ tbody td{padding:.45rem .55rem;white-space:nowrap}
 .mcl{position:absolute;top:.7rem;right:.7rem;background:var(--s2);border:1px solid var(--bd);color:var(--t2);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;z-index:10}
 .mcl:hover{border-color:var(--rd);color:var(--rd)}
 .mhd{padding:1.3rem 1.3rem .7rem;border-bottom:1px solid var(--bd)}.mbd{padding:1.1rem 1.3rem 1.3rem}
+/* COMPARE PICKER */
+.cmp-pk{display:none;padding:.6rem 1rem;border-bottom:1px solid var(--bd);background:var(--s2)}
+.cmp-pk.open{display:block;animation:fadeIn .12s}
+.cmp-pk-ttl{font-size:.72rem;font-weight:600;color:var(--t2);margin-bottom:.35rem}
+.cmp-pk input{width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:.35rem .5rem;border-radius:7px;font-size:.75rem;font-family:inherit;outline:none}
+.cmp-pk input:focus{border-color:var(--ac)}
+.cmp-pk-res{max-height:180px;overflow-y:auto;margin-top:.35rem}
+.cmp-pk-row{padding:.28rem .4rem;border-radius:5px;cursor:pointer;font-size:.73rem;display:flex;justify-content:space-between;align-items:center}
+.cmp-pk-row:hover{background:var(--s3)}
+.cmp-btn{background:var(--s2);border:1px solid var(--bd);color:var(--t2);padding:.22rem .5rem;border-radius:6px;font-size:.68rem;cursor:pointer;font-family:inherit;font-weight:600;transition:all .15s;display:inline-flex;align-items:center;gap:.25rem}
+.cmp-btn:hover{border-color:var(--ac);color:var(--ac);background:var(--ad)}
 .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
 .psec{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:1rem}
 .psec h4{font-size:.78rem;font-weight:600;margin-bottom:.6rem}.psec.full{grid-column:1/-1}
@@ -262,13 +273,13 @@ tbody td{padding:.45rem .55rem;white-space:nowrap}
     <div class="tp" id="p-methodology"><div id="mz"></div></div>
   </div>
 </div>
-<div class="mo" id="pm"><div class="modal"><button class="mcl" onclick="closeM()">✕</button><div class="mhd" id="mh"></div><div class="mbd" id="mb"></div></div></div>
+<div class="mo" id="pm"><div class="modal"><button class="mcl" onclick="closeM()">✕</button><div class="mhd" id="mh"></div><div class="cmp-pk" id="cmpPicker"><div class="cmp-pk-ttl">⚔️ Compare with...</div><input id="cmpSearch" type="text" placeholder="Search by name or team..." oninput="filterCmpPicker(this.value)" autocomplete="off"><div class="cmp-pk-res" id="cmpResults"></div></div><div class="mbd" id="mb"></div></div></div>
 <div class="mo" id="cm"><div class="modal" style="max-width:960px"><button class="mcl" onclick="closeCM()">✕</button><div class="mhd" id="cmh"></div><div class="mbd" id="cmb"></div></div></div>
 <div class="ttpop" id="ttp"><button class="ctt" onclick="closeTT()">✕</button><h5 id="ttt"></h5><p id="ttb"></p></div>
 
 <button class="chat-fab" id="chatFab" onclick="toggleChat()" title="AI Assistant">🤖</button>
 <div class="chat-panel" id="chatPanel">
-  <div class="chat-hd"><h4>🤖 <span>Scout AI</span></h4><button class="btn-s" onclick="chatHist=[];document.getElementById('chatMsgs').innerHTML='';addAiWelcome()" style="font-size:.58rem">Clear</button></div>
+  <div class="chat-hd"><h4>🤖 <span>Scout AI</span></h4><button class="btn-s" onclick="clearChat()" style="font-size:.58rem">Clear</button></div>
   <div class="chat-msgs" id="chatMsgs"></div>
   <div class="chat-quick" id="chatQuick">
     <button class="chat-qb" onclick="sendChat('Analyze my roster and suggest improvements')">Analyze roster</button>
@@ -554,7 +565,7 @@ function renderPos(){const g=document.getElementById('pgd');g.style.cssText='dis
 function openP(id){const p=ALL.find(x=>x._id===id);if(!p)return;const stats=gSP(p,PCT);const sorted=Object.entries(stats).sort((a,b)=>b[1].pctile-a[1].pctile);const str=sorted.filter(([k,v])=>v.pctile>=70&&v.weight>0).slice(0,5);const wk=sorted.filter(([k,v])=>v.pctile<=35&&v.weight>0).slice(0,4);
   const setsThresh=ALL.length?quantile(ALL.map(x=>x.Sets),VS.setsPctile):100;const adjFactor=VS.setsAdj==='on'?Math.sqrt(Math.min(1,(p.Sets||1)/setsThresh)):1;
   const hist=HIST[p.Player]||[];const prevTeams=[...new Set(hist.filter(h=>h.Season!==2025&&h.Team!==p.Team).map(h=>h.Team))];const yearsActive=hist.length>1?`${hist[0].Season}–2025`:'2025';
-  document.getElementById('mh').innerHTML=`<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">${pbH(p._np)} ${tbH(p._tier)}${hist.length>1?` <span style="font-size:.6rem;color:var(--t3);background:var(--s2);padding:.12rem .35rem;border-radius:4px">${yearsActive} · ${hist.length} seasons</span>`:''}</div><div style="font-size:1.3rem;font-weight:700">${p.Player}</div><div style="color:var(--t2);font-size:.8rem">${p.Team}${prevTeams.length?' <span style="color:var(--cy);font-size:.68rem">(prev: '+prevTeams.join(', ')+')</span>':''}  · ${PN[p._np]} · ${p.Sets} sets / ${p.Matches} matches${VS.setsAdj==='on'?` · Sets adj: ${(adjFactor*100).toFixed(0)}%`:''}</div><div style="margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.2rem">${tagHH(p._tags,true)}</div>`;
+  document.getElementById('mh').innerHTML=`<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">${pbH(p._np)} ${tbH(p._tier)}${hist.length>1?` <span style="font-size:.6rem;color:var(--t3);background:var(--s2);padding:.12rem .35rem;border-radius:4px">${yearsActive} · ${hist.length} seasons</span>`:''}</div><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem"><div><div style="font-size:1.3rem;font-weight:700">${p.Player}</div><div style="color:var(--t2);font-size:.8rem">${p.Team}${prevTeams.length?' <span style="color:var(--cy);font-size:.68rem">(prev: '+prevTeams.join(', ')+')</span>':''}  · ${PN[p._np]} · ${p.Sets} sets / ${p.Matches} matches${VS.setsAdj==='on'?` · Sets adj: ${(adjFactor*100).toFixed(0)}%`:''}</div></div><button class="cmp-btn" onclick="showCmpPicker(${id})" style="margin-top:.15rem;white-space:nowrap;flex-shrink:0">⚔️ Compare</button></div><div style="margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.2rem">${tagHH(p._tags,true)}</div>`;
   document.getElementById('mb').innerHTML=`<div class="pgrid">
     <div class="psec" style="text-align:center"><h4>Score</h4><div class="mono" style="font-size:2.5rem;font-weight:700;color:${p._score>=82?'var(--yw)':p._score>=65?'var(--gn)':p._score>=45?'var(--bl)':'var(--pu)'}">${p._score}</div><div style="font-size:.7rem;color:var(--t2)">/ 100</div><div class="mono" style="margin-top:.5rem;font-size:1.3rem;font-weight:700;color:var(--gn)">$${p._val.toLocaleString()}</div><div style="font-size:.6rem;color:var(--t3)">Predicted Value</div></div>
     <div class="psec"><h4>Raw Stats</h4><table style="width:100%;font-size:.72rem">${[['Kills',p.Kills,p._kps+'/s'],['Hit %',(p['Hit %']||0).toFixed(3)],['Digs',p.Digs,p._dps+'/s'],['Assists',p.Assists,p._aps+'/s'],['Blocks',p['Total Blk'],p._bps+'/s'],['Aces',p.Aces,p._acps+'/s'],['Points',p.PTS,p._pps+'/s'],['Atk Err',p['Atk Err'],((p['Atk Err']||0)/Math.max(p.Atk||1,1)*100).toFixed(1)+'%'],['Serv Err',p['Serv Err']],['BH Err',p['BH Err']]].map(([l,v,sub])=>`<tr><td style="color:var(--t2);padding:.18rem 0">${l}</td><td style="text-align:right" class="mono">${v}${sub?` <span style="color:var(--t3);font-size:.58rem">${sub}</span>`:''}</td></tr>`).join('')}</table></div>
@@ -578,8 +589,26 @@ function openP(id){const p=ALL.find(x=>x._id===id);if(!p)return;const stats=gSP(
     })()}</div>
     <div class="psec full"><h4>🔄 Similar Players</h4><div style="display:flex;gap:.35rem;flex-wrap:wrap">${ALL.filter(x=>x._np===p._np&&x._id!==p._id&&Math.abs(x._score-p._score)<=8).sort((a,b)=>Math.abs(a._score-p._score)-Math.abs(b._score-p._score)).slice(0,6).map(x=>`<div style="background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:.35rem .55rem;cursor:pointer" onmouseover="this.style.borderColor='var(--ac)'" onmouseout="this.style.borderColor='var(--bd)'" onclick="openP(${x._id})"><div style="font-weight:600;font-size:.72rem">${x.Player}</div><div style="font-size:.58rem;color:var(--t3)">${x.Team} · ${x._score} · $${x._val.toLocaleString()}</div></div>`).join('')||'<span style="color:var(--t3);font-size:.72rem">None</span>'}</div></div>
   </div>`;
-  document.getElementById('pm').classList.add('show');document.getElementById('pm').onclick=e=>{if(e.target===document.getElementById('pm'))closeM()}}
-function closeM(){document.getElementById('pm').classList.remove('show')}
+  document.getElementById('pm').classList.add('show');document.getElementById('pm').onclick=e=>{if(e.target===document.getElementById('pm'))closeM()}
+  document.getElementById('cmpPicker').classList.remove('open');document.getElementById('cmpSearch').value='';document.getElementById('cmpResults').innerHTML='';}
+function closeM(){document.getElementById('pm').classList.remove('show');document.getElementById('cmpPicker').classList.remove('open')}
+
+// ── COMPARE PICKER ──
+let _cmpFromId=null;
+function showCmpPicker(fromId){
+  _cmpFromId=fromId;
+  const pk=document.getElementById('cmpPicker');
+  if(pk.classList.toggle('open')){
+    const inp=document.getElementById('cmpSearch');inp.value='';filterCmpPicker('');
+    setTimeout(()=>inp.focus(),50);}}
+function filterCmpPicker(q){
+  const res=document.getElementById('cmpResults');
+  const t=(q||'').toLowerCase().trim();
+  const matches=ALL.filter(p=>p._id!==_cmpFromId&&(!t||p.Player.toLowerCase().includes(t)||p.Team.toLowerCase().includes(t)))
+    .sort((a,b)=>b._score-a._score).slice(0,8);
+  if(!matches.length){res.innerHTML='<div style="font-size:.72rem;color:var(--t3);padding:.3rem 0">No players found</div>';return;}
+  res.innerHTML=matches.map(p=>`<div class="cmp-pk-row" onclick="pickCmpPlayer(${p._id})"><span><b style="font-size:.73rem">${p.Player}</b> <span style="color:var(--t3);font-size:.62rem">${p.Team}</span></span><span style="display:flex;gap:.3rem;align-items:center">${pbH(p._np)}<span class="mono" style="font-size:.66rem;color:var(--t2)">${p._score}</span><span style="font-size:.6rem;color:var(--gn)">$${p._val.toLocaleString()}</span></span></div>`).join('');}
+function pickCmpPlayer(toId){document.getElementById('cmpPicker').classList.remove('open');closeM();openCompare(_cmpFromId,toId);}
 
 // Open historical season profile
 function openHist(playerName,season){
@@ -854,16 +883,227 @@ function openCompare(id1,id2){
 }
 
 // ═══════════════════════════════════════
-// AI CHAT — JARVIS MODE (Gemini)
+// AI CHAT — JARVIS MODE (Gemini) + Function Calling
 // ═══════════════════════════════════════
 const GEMINI_URL='https://dry-cell-b187.bryanhkwan.workers.dev';
 let chatHist=[];
 let chatOpen=false;
-let pendingActions=[];// Queue of proposed actions awaiting confirmation
+let pendingActions=[];
 let actionIdCounter=0;
 
+// Per-turn state (reset each message)
+let lastUserText='';
+let turnHasDashboardLookup=false;
+let turnWebSearchDeferred=false;
+let turnHasWebSearch=false;
+let turnForcedWebForValuation=false;
+
+// ── TOOL DECLARATIONS (Gemini function calling) ──
+const AI_TOOLS=[{functionDeclarations:[
+  {name:'get_dashboard_context',description:'Get overall volleyball dashboard state: total players loaded, teams, current roster, budget.',parameters:{type:'OBJECT',properties:{}}},
+  {name:'get_player_profile',description:'Get full stats, score, tier, valuation, and archetype tags for a player by name.',parameters:{type:'OBJECT',properties:{name:{type:'STRING',description:'Player name'}},required:['name']}},
+  {name:'search_players',description:'Search/filter players by keyword, position, tier, or budget. Returns ranked results.',parameters:{type:'OBJECT',properties:{query:{type:'STRING',description:'Keyword (name or team)'},position:{type:'STRING',description:'OH | MB | S | L/DS | OPP'},maxValue:{type:'NUMBER',description:'Max valuation $'},minScore:{type:'NUMBER',description:'Min score 0-100'},sortBy:{type:'STRING',description:'score | val | kills | digs | assists | blocks | aces | hitpct'},limit:{type:'NUMBER',description:'Max results, default 10'}}}},
+  {name:'get_top_players',description:'Get top-ranked players by position, tier, or stat. Use for best/elite player queries.',parameters:{type:'OBJECT',properties:{position:{type:'STRING',description:'OH | MB | S | L/DS | OPP'},tier:{type:'STRING',description:'Elite | Starter | Rotation | Bench'},sortBy:{type:'STRING',description:'score | val | kills | digs | assists | blocks | aces | hitpct'},limit:{type:'NUMBER',description:'Max results, default 10'},maxValue:{type:'NUMBER',description:'Max valuation $'}}}},
+  {name:'web_search',description:'Search the web for current news, NIL market data, transfer portal updates, injury reports, or player availability.',parameters:{type:'OBJECT',properties:{query:{type:'STRING',description:'Search query'}},required:['query']}}
+]}];
+
+// ── HELPERS ──
+function normalizeName(s){return(s||'').toLowerCase().replace(/[.,]/g,'').replace(/\b(jr|sr|ii|iii|iv)\b/gi,'').replace(/\s+/g,' ').trim()}
+function matchLoadedPlayerName(text){
+  const t=normalizeName(text);
+  return ALL.find(p=>normalizeName(p.Player)===t)||
+    ALL.find(p=>t.includes(normalizeName(p.Player)))||
+    ALL.find(p=>{const last=normalizeName(p.Player).split(' ').pop();return last.length>3&&t.includes(last)})}
+
+// ── DASHBOARD TOOL IMPLEMENTATIONS ──
+function execGetDashboardContext(){
+  const posC={};ALL.forEach(p=>{posC[p._np]=(posC[p._np]||0)+1});
+  const spent=ROST.reduce((s,p)=>s+p._val,0);
+  return{totalPlayers:ALL.length,teams:new Set(ALL.map(p=>p.Team)).size,positionBreakdown:posC,
+    averageScore:ALL.length?Math.round(ALL.reduce((s,p)=>s+p._score,0)/ALL.length):0,
+    roster:{count:ROST.length,maxSize:RSIZE,budget:TBUDGET,spent,remaining:TBUDGET-spent,
+      members:ROST.map(p=>({name:p.Player,pos:p._np,team:p.Team,score:p._score,tier:p._tier,value:p._val}))}}}
+function execGetPlayerProfile(args){
+  const norm=normalizeName(args.name||'');
+  const p=ALL.find(x=>normalizeName(x.Player)===norm)||
+    ALL.find(x=>normalizeName(x.Player).includes(norm))||
+    ALL.find(x=>{const last=normalizeName(x.Player).split(' ').pop();return last.length>3&&norm.includes(last)});
+  if(!p)return{error:`"${args.name}" not found. Try search_players.`};
+  const sp=gSP(p,PCT);
+  return{name:p.Player,team:p.Team,position:p._np,score:p._score,tier:p._tier,value:p._val,sets:p.Sets,
+    tags:p._tags?p._tags.map(t=>t.t):[],
+    stats:{kills_per_set:+p._kps,hit_pct:parseFloat(p['Hit %'])||0,digs_per_set:+p._dps,
+      assists_per_set:+p._aps,blocks_per_set:+p._bps,aces_per_set:+p._acps,pts_per_set:+p._pps},
+    percentiles:Object.fromEntries(Object.entries(sp).map(([k,v])=>[k,v.pctile]))}}
+function execSearchPlayers(args){
+  const{query='',position,maxValue,minScore,sortBy='score',limit=10}=args;
+  const words=(query||'').toLowerCase().split(/\s+/).filter(w=>w.length>2).slice(0,4);
+  let res=ALL.filter(p=>{
+    if(position&&p._np!==position)return false;
+    if(maxValue&&p._val>maxValue)return false;
+    if(minScore&&p._score<minScore)return false;
+    if(words.length&&!words.some(w=>p.Player.toLowerCase().includes(w)||p.Team.toLowerCase().includes(w)))return false;
+    return true;
+  });
+  res.sort((a,b)=>{switch(sortBy){
+    case'val':return b._val-a._val;case'kills':return+b._kps-+a._kps;case'digs':return+b._dps-+a._dps;
+    case'assists':return+b._aps-+a._aps;case'blocks':return+b._bps-+a._bps;case'aces':return+b._acps-+a._acps;
+    case'hitpct':return(parseFloat(b['Hit %'])||0)-(parseFloat(a['Hit %'])||0);default:return b._score-a._score}});
+  return res.slice(0,limit).map(p=>({name:p.Player,team:p.Team,position:p._np,score:p._score,tier:p._tier,
+    value:p._val,kills_per_set:+p._kps,hit_pct:parseFloat(p['Hit %'])||0,
+    digs_per_set:+p._dps,assists_per_set:+p._aps,blocks_per_set:+p._bps,aces_per_set:+p._acps}))}
+function execGetTopPlayers(args){
+  const tierMin={Elite:82,Starter:65,Rotation:45,Bench:28};
+  return execSearchPlayers({...args,query:'',minScore:args.tier?tierMin[args.tier]:args.minScore})}
+async function doWebSearch(query){
+  try{
+    const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),8000);
+    const r=await fetch(GEMINI_URL+'/search',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({query}),signal:ctrl.signal});
+    clearTimeout(tid);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return await r.json();
+  }catch(e){return{error:'Web search unavailable: '+e.message,results:[]}}}
+
+// ── EVIDENCE CARDS ──
+function renderDashboardEvidence(data){
+  const d=document.createElement('div');d.className='chat-msg ai';
+  d.style.cssText='font-size:.66rem;opacity:.7;border-style:dashed;padding:.4rem .6rem';
+  const preview=Array.isArray(data)?`${data.length} players found`:(data.name?`${data.name} (${data.position}, Score:${data.score})`:'Dashboard context loaded');
+  d.innerHTML=`<span style="color:var(--ac)">📊 Dashboard:</span> ${preview}`;
+  document.getElementById('chatMsgs').appendChild(d);
+  document.getElementById('chatMsgs').scrollTop=document.getElementById('chatMsgs').scrollHeight;}
+function renderWebEvidence(data){
+  const d=document.createElement('div');d.className='chat-msg ai';
+  d.style.cssText='font-size:.66rem;opacity:.7;border-style:dashed;padding:.4rem .6rem';
+  d.innerHTML=data.error
+    ?`<span style="color:var(--yw)">🌐 Web:</span> ${data.error}`
+    :`<span style="color:var(--bl)">🌐 Web context loaded</span>`;
+  document.getElementById('chatMsgs').appendChild(d);
+  document.getElementById('chatMsgs').scrollTop=document.getElementById('chatMsgs').scrollHeight;}
+
+// ── MANDATORY WEB REVIEW GATE ──
+function needsMandatoryWebReview(text){
+  const t=text.toLowerCase();
+  const isSearch=/\b(find|search|show|list|get|recommend|suggest)\b/.test(t);
+  const valKw=/(\$|worth|valuat|invest|overpay|underpay|fair|steal|avoid|buy|sign|price|priced|\bpay\b)/.test(t);
+  const newsKw=/\b(latest|recent|today|yesterday|this week|last week|news|injur|hurt|suspend|transfer|portal|available|availability|out for|return|rumor|report|update|status|commit|nil|coaching|coach|minutes|role|lineup|starter|starting)\b/.test(t);
+  if(!isSearch&&valKw)return true;
+  if(newsKw)return true;
+  return false;}
+function buildForcedWebQuery(text){
+  const t=text.toLowerCase();
+  const isNews=/\b(latest|recent|today|news|injur|hurt|suspend|transfer|portal|return|rumor|update|status|coach|minutes|role|lineup|starter|starting)\b/.test(t);
+  const player=matchLoadedPlayerName(text);const name=player?player.Player:null;
+  if(name&&!isNews)return`${name} college volleyball NIL salary contract value 2025`;
+  if(name&&isNews)return`${name} college volleyball latest news injury transfer portal 2025`;
+  if(!isNews)return`${text} college volleyball NIL value market 2025`;
+  return`${text} college volleyball latest news 2025`;}
+
+// ── CALL GEMINI (function-calling aware) ──
+async function callGemini(extraText){
+  const contents=chatHist.map(h=>h.parts?h:{role:h.role==='ai'?'model':'user',parts:[{text:h.text||''}]});
+  if(extraText)contents.push({role:'user',parts:[{text:extraText}]});
+  const body={contents,tools:AI_TOOLS,generationConfig:{maxOutputTokens:2048,temperature:0.7}};
+  const r=await fetch(GEMINI_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error('Gemini error '+r.status);
+  return r.json();}
+
+// ── PROCESS RESPONSE (tool-call loop) ──
+async function processResp(data,depth){
+  depth=depth||0;if(depth>8)return'[Scout AI reached max reasoning depth — try rephrasing]';
+  const cand=data.candidates?.[0];
+  if(!cand?.content)throw new Error(data.error?.message||'No response from Scout AI');
+  const fnCalls=cand.content.parts.filter(p=>p.functionCall);
+  if(!fnCalls.length){
+    // Text response — force web pass if needed and not yet done
+    const text=cand.content.parts.map(p=>p.text||'').join('');
+    if(needsMandatoryWebReview(lastUserText)&&!turnHasWebSearch&&!turnForcedWebForValuation){
+      turnForcedWebForValuation=true;
+      const q=buildForcedWebQuery(lastUserText);
+      const wr=await doWebSearch(q);turnHasWebSearch=true;renderWebEvidence(wr);
+      chatHist.push({role:'model',parts:[{functionCall:{name:'web_search',args:{query:q}}}]});
+      chatHist.push({role:'user',parts:[{functionResponse:{name:'web_search',response:{result:wr}}}]});
+      return processResp(await callGemini(null),depth+1);}
+    return text;}
+  // Check if any call is web_search and dashboard hasn't run yet → enforce dashboard-first
+  const hasWebCall=fnCalls.some(c=>c.functionCall.name==='web_search');
+  if(hasWebCall&&!turnHasDashboardLookup&&!turnWebSearchDeferred&&ALL.length){
+    turnWebSearchDeferred=true;turnHasDashboardLookup=true;
+    const mParts=[];const uParts=[];
+    const player=matchLoadedPlayerName(lastUserText);
+    if(player){
+      const prof=execGetPlayerProfile({name:player.Player});
+      mParts.push({functionCall:{name:'get_player_profile',args:{name:player.Player}}});
+      uParts.push({functionResponse:{name:'get_player_profile',response:{result:prof}}});
+    }else{
+      const q=lastUserText.split(/\s+/).slice(0,4).join(' ');
+      const sr=execSearchPlayers({query:q,limit:5});
+      mParts.push({functionCall:{name:'search_players',args:{query:q}}});
+      uParts.push({functionResponse:{name:'search_players',response:{result:sr}}});}
+    const ctx=execGetDashboardContext();
+    mParts.push({functionCall:{name:'get_dashboard_context',args:{}}});
+    uParts.push({functionResponse:{name:'get_dashboard_context',response:{result:ctx}}});
+    chatHist.push({role:'model',parts:mParts});chatHist.push({role:'user',parts:uParts});
+    return processResp(await callGemini(null),depth+1);}
+  // Execute all function calls in this turn as a single model/user pair
+  const mParts=fnCalls.map(p=>({functionCall:p.functionCall}));
+  const uParts=[];
+  for(const part of fnCalls){
+    const{name,args}=part.functionCall;let result;
+    if(name==='web_search'){
+      result=await doWebSearch(args.query||buildForcedWebQuery(lastUserText));
+      turnHasWebSearch=true;renderWebEvidence(result);
+    }else{
+      turnHasDashboardLookup=true;
+      if(name==='get_dashboard_context')result=execGetDashboardContext();
+      else if(name==='get_player_profile')result=execGetPlayerProfile(args);
+      else if(name==='search_players')result=execSearchPlayers(args);
+      else if(name==='get_top_players')result=execGetTopPlayers(args);
+      else result={error:'Unknown tool: '+name};}
+    uParts.push({functionResponse:{name,response:{result}}});}
+  chatHist.push({role:'model',parts:mParts});chatHist.push({role:'user',parts:uParts});
+  return processResp(await callGemini(null),depth+1);}
+
+// ── VALUATION / NEWS PIPELINE ──
+async function runValuationComparePipeline(userText){
+  // User message already in chatHist — inject tool results then call Gemini
+  const mParts=[];const uParts=[];
+  if(ALL.length){
+    const player=matchLoadedPlayerName(userText);
+    if(player){
+      const prof=execGetPlayerProfile({name:player.Player});
+      mParts.push({functionCall:{name:'get_player_profile',args:{name:player.Player}}});
+      uParts.push({functionResponse:{name:'get_player_profile',response:{result:prof}}});
+      renderDashboardEvidence(prof);
+    }else{
+      const q=userText.split(/\s+/).filter(w=>w.length>2).slice(0,4).join(' ');
+      const sr=execSearchPlayers({query:q,limit:5});
+      mParts.push({functionCall:{name:'search_players',args:{query:q}}});
+      uParts.push({functionResponse:{name:'search_players',response:{result:sr}}});
+      renderDashboardEvidence(sr);}
+    const ctx=execGetDashboardContext();
+    mParts.push({functionCall:{name:'get_dashboard_context',args:{}}});
+    uParts.push({functionResponse:{name:'get_dashboard_context',response:{result:ctx}}});
+    turnHasDashboardLookup=true;}
+  const wq=buildForcedWebQuery(userText);
+  const wr=await doWebSearch(wq);
+  mParts.push({functionCall:{name:'web_search',args:{query:wq}}});
+  uParts.push({functionResponse:{name:'web_search',response:{result:wr}}});
+  turnHasWebSearch=true;renderWebEvidence(wr);
+  chatHist.push({role:'model',parts:mParts});chatHist.push({role:'user',parts:uParts});
+  return callGemini(null);}
+
+// ── CLEAR CHAT ──
+function clearChat(){
+  chatHist=[];pendingActions=[];actionIdCounter=0;
+  lastUserText='';turnHasDashboardLookup=false;turnWebSearchDeferred=false;
+  turnHasWebSearch=false;turnForcedWebForValuation=false;
+  document.getElementById('chatMsgs').innerHTML='';addAiWelcome();}
+
+// ── TOGGLE + WELCOME ──
 function toggleChat(){chatOpen=!chatOpen;document.getElementById('chatPanel').classList.toggle('open',chatOpen);document.getElementById('chatFab').classList.toggle('has-panel',chatOpen);document.getElementById('chatFab').textContent=chatOpen?'✕':'🤖';if(chatOpen&&!document.getElementById('chatMsgs').children.length)addAiWelcome()}
-function addAiWelcome(){addMsg('ai',`Hey Coach! 👋 I'm <b>Scout AI</b> — your interactive recruiting assistant.\n\nI can <b>control your dashboard</b> for you:\n• <b>"Add the entire Toledo roster"</b> → I'll load them into your roster builder\n• <b>"Analyze my team and suggest swaps"</b> → I'll find weaknesses and propose trades\n• <b>"Compare Player A vs Player B"</b> → Side-by-side visual comparison\n• <b>"Increase budget to $300K"</b> → I'll adjust your settings\n• <b>"Show me elite setters"</b> → I'll filter the dashboard\n\nEvery action I propose, you can ✅ approve or ❌ reject. Let's build a championship roster!`)}
+function addAiWelcome(){addMsg('ai',`Hey Coach! 👋 I'm <b>Scout AI</b> — your interactive recruiting assistant.\n\nI can <b>control your dashboard</b> for you:\n• <b>"Add the entire Toledo roster"</b> → I'll load them into your roster builder\n• <b>"Analyze my team and suggest swaps"</b> → I'll find weaknesses and propose trades\n• <b>"Compare Player A vs Player B"</b> → Side-by-side visual comparison\n• <b>"Increase budget to $300K"</b> → I'll adjust your settings\n• <b>"Show me elite setters"</b> → I'll filter the dashboard\n• <b>"Is Jane Smith worth $150k?"</b> → I'll check dashboard stats + web data\n\nEvery action I propose, you can ✅ approve or ❌ reject. Let's build a championship roster!`)}
 
 // ── ACTION EXECUTION ENGINE ──
 function execAction(actionId){
@@ -872,131 +1112,56 @@ function execAction(actionId){
   act.done=true;
   const btn=document.getElementById('abtn-'+actionId);
   if(btn)btn.innerHTML='<span class="chat-act done">✅ Done</span>';
-
   switch(act.type){
-    case 'add_player':{
-      const p=ALL.find(x=>x.Player.toLowerCase()===act.name.toLowerCase().trim());
-      if(p&&!ROST.some(r=>r._id===p._id)){if(ROST.length<RSIZE)addR(p._id);}
-      break;}
-    case 'remove_player':{
-      const p=ROST.find(x=>x.Player.toLowerCase()===act.name.toLowerCase().trim());
-      if(p)rmR(p._id);
-      break;}
-    case 'swap':{
-      const pOut=ROST.find(x=>x.Player.toLowerCase()===act.out.toLowerCase().trim());
-      const pIn=ALL.find(x=>x.Player.toLowerCase()===act.inn.toLowerCase().trim());
-      if(pOut&&pIn)swpR(pOut._id,pIn._id);
-      break;}
-    case 'add_team':{
-      const team=act.team.trim();
-      const tp=ALL.filter(p=>p.Team.toLowerCase()===team.toLowerCase()).sort((a,b)=>b._score-a._score);
-      for(const p of tp){if(ROST.length>=RSIZE)break;if(!ROST.some(r=>r._id===p._id)){const spent=ROST.reduce((s,r)=>s+r._val,0);if(p._val<=TBUDGET-spent&&p._val<=PBUDGET)ROST.push(p)}}
-      renderAll();
-      break;}
-    case 'clear_roster':{
-      clearR();
-      break;}
-    case 'set_budget':{
-      TBUDGET=act.value;renderAll();
-      break;}
-    case 'set_max_player':{
-      PBUDGET=act.value;renderAll();
-      break;}
-    case 'set_roster_size':{
-      RSIZE=act.value;renderAll();
-      break;}
-    case 'filter':{
-      applyAiFilter(act.params);
-      break;}
-    case 'open_player':{
-      const p=ALL.find(x=>x.Player.toLowerCase()===act.name.toLowerCase().trim());
-      if(p)openP(p._id);
-      break;}
-    case 'compare':{
-      const p1=ALL.find(x=>x.Player.toLowerCase()===act.p1.toLowerCase().trim());
-      const p2=ALL.find(x=>x.Player.toLowerCase()===act.p2.toLowerCase().trim());
-      if(p1&&p2)openCompare(p1._id,p2._id);
-      break;}
-    case 'switch_tab':{
-      document.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('active'));
-      document.querySelectorAll('.tp').forEach(x=>x.classList.remove('active'));
-      const tab=document.querySelector(`[data-tab="${act.tab}"]`);
-      const panel=document.getElementById(`p-${act.tab}`);
-      if(tab)tab.classList.add('active');if(panel)panel.classList.add('active');
-      break;}
-  }
-  // Show confirmation in chat
-  addMsg('ai',`✅ Done! ${act.desc||'Action completed.'}`);
-}
-
-function rejectAction(actionId){
-  const act=pendingActions.find(a=>a.id===actionId);
-  if(!act||act.done)return;
-  act.done=true;
-  const btn=document.getElementById('abtn-'+actionId);
-  if(btn)btn.innerHTML='<span class="chat-act done">❌ Skipped</span>';
-}
-
-function execAllPending(){
-  pendingActions.filter(a=>!a.done).forEach(a=>execAction(a.id));
-}
-function rejectAllPending(){
-  pendingActions.filter(a=>!a.done).forEach(a=>rejectAction(a.id));
-}
+    case 'add_player':{const p=ALL.find(x=>x.Player.toLowerCase()===act.name.toLowerCase().trim());if(p&&!ROST.some(r=>r._id===p._id)){if(ROST.length<RSIZE)addR(p._id);}break;}
+    case 'remove_player':{const p=ROST.find(x=>x.Player.toLowerCase()===act.name.toLowerCase().trim());if(p)rmR(p._id);break;}
+    case 'swap':{const pOut=ROST.find(x=>x.Player.toLowerCase()===act.out.toLowerCase().trim());const pIn=ALL.find(x=>x.Player.toLowerCase()===act.inn.toLowerCase().trim());if(pOut&&pIn)swpR(pOut._id,pIn._id);break;}
+    case 'add_team':{const team=act.team.trim();const tp=ALL.filter(p=>p.Team.toLowerCase()===team.toLowerCase()).sort((a,b)=>b._score-a._score);for(const p of tp){if(ROST.length>=RSIZE)break;if(!ROST.some(r=>r._id===p._id)){const spent=ROST.reduce((s,r)=>s+r._val,0);if(p._val<=TBUDGET-spent&&p._val<=PBUDGET)ROST.push(p)}}renderAll();break;}
+    case 'clear_roster':{clearR();break;}
+    case 'set_budget':{TBUDGET=act.value;renderAll();break;}
+    case 'set_max_player':{PBUDGET=act.value;renderAll();break;}
+    case 'set_roster_size':{RSIZE=act.value;renderAll();break;}
+    case 'filter':{applyAiFilter(act.params);break;}
+    case 'open_player':{const p=ALL.find(x=>x.Player.toLowerCase()===act.name.toLowerCase().trim());if(p)openP(p._id);break;}
+    case 'compare':{const p1=ALL.find(x=>x.Player.toLowerCase()===act.p1.toLowerCase().trim());const p2=ALL.find(x=>x.Player.toLowerCase()===act.p2.toLowerCase().trim());if(p1&&p2)openCompare(p1._id,p2._id);break;}
+    case 'switch_tab':{document.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tp').forEach(x=>x.classList.remove('active'));const tab=document.querySelector(`[data-tab="${act.tab}"]`);const panel=document.getElementById(`p-${act.tab}`);if(tab)tab.classList.add('active');if(panel)panel.classList.add('active');break;}}
+  addMsg('ai',`✅ Done! ${act.desc||'Action completed.'}`)}
+function rejectAction(actionId){const act=pendingActions.find(a=>a.id===actionId);if(!act||act.done)return;act.done=true;const btn=document.getElementById('abtn-'+actionId);if(btn)btn.innerHTML='<span class="chat-act done">❌ Skipped</span>';}
+function execAllPending(){pendingActions.filter(a=>!a.done).forEach(a=>execAction(a.id));}
+function rejectAllPending(){pendingActions.filter(a=>!a.done).forEach(a=>rejectAction(a.id));}
 
 // ── MESSAGE RENDERING ──
 function addMsg(role,text){
   const c=document.getElementById('chatMsgs');const d=document.createElement('div');d.className='chat-msg '+role;
   if(role==='ai'){
     let html=text;
-    // Parse action tags: [ACTION:type|param1|param2|...|description]
     html=html.replace(/\[ACTION:([^\]]+)\]/g,(m,content)=>{
-      const parts=content.split('|').map(s=>s.trim());
-      const type=parts[0];
-      const aid=++actionIdCounter;
-      let act=null;let label='';
-
+      const parts=content.split('|').map(s=>s.trim());const type=parts[0];const aid=++actionIdCounter;let act=null;let label='';
       switch(type){
-        case 'add_player': act={id:aid,type,name:parts[1],desc:`Added ${parts[1]} to roster`};label=`+ Add ${parts[1]}`;break;
-        case 'remove_player': act={id:aid,type,name:parts[1],desc:`Removed ${parts[1]} from roster`};label=`Remove ${parts[1]}`;break;
-        case 'swap': act={id:aid,type,out:parts[1],inn:parts[2],desc:`Swapped ${parts[1]} → ${parts[2]}`};label=`⇄ Swap ${parts[1]} → ${parts[2]}`;break;
-        case 'add_team': act={id:aid,type,team:parts[1],desc:`Added ${parts[1]} players to roster`};label=`+ Add all ${parts[1]} players`;break;
-        case 'clear_roster': act={id:aid,type,desc:'Cleared roster'};label='Clear roster';break;
-        case 'set_budget': act={id:aid,type,value:parseInt(parts[1]),desc:`Set budget to $${parseInt(parts[1]).toLocaleString()}`};label=`Set budget → $${parseInt(parts[1]).toLocaleString()}`;break;
-        case 'set_max_player': act={id:aid,type,value:parseInt(parts[1]),desc:`Set max/player to $${parseInt(parts[1]).toLocaleString()}`};label=`Set max/player → $${parseInt(parts[1]).toLocaleString()}`;break;
-        case 'set_roster_size': act={id:aid,type,value:parseInt(parts[1]),desc:`Set roster size to ${parts[1]}`};label=`Set roster size → ${parts[1]}`;break;
-        case 'filter': {const fp=Object.fromEntries(parts[1].split(',').map(p=>p.split('=')));act={id:aid,type,params:fp,desc:'Applied filter'};label='→ Apply filter';break;}
-        case 'open_player': act={id:aid,type,name:parts[1],desc:`Opened ${parts[1]}'s profile`};label=`View ${parts[1]}`;break;
-        case 'compare': act={id:aid,type,p1:parts[1],p2:parts[2],desc:`Compared ${parts[1]} vs ${parts[2]}`};label=`⚔️ Compare ${parts[1]} vs ${parts[2]}`;break;
-        case 'switch_tab': act={id:aid,type,tab:parts[1],desc:`Switched to ${parts[1]} tab`};label=`Go to ${parts[1]}`;break;
-        default: return m;
-      }
-
-      if(act){pendingActions.push(act);
-        return `<span id="abtn-${aid}" class="chat-actions"><button class="chat-act confirm" onclick="execAction(${aid})" title="Approve">✅ ${label}</button><button class="chat-act reject" onclick="rejectAction(${aid})" title="Reject">❌</button></span>`;
-      }
-      return m;
-    });
-
-    // Also parse old-style tags for backward compat
-    html=html.replace(/\[OPEN_PLAYER:([^\]]+)\]/g,(m,name)=>{
-      const p=ALL.find(x=>x.Player.toLowerCase()===name.toLowerCase().trim());
-      return p?`<span class="plink" onclick="openP(${p._id})">${p.Player} (${p._np}, ${p._score})</span>`:name;
-    });
-    html=html.replace(/\[COMPARE:([^\]]+)\]/g,(m,names)=>{
-      const pts=names.split('|').map(n=>n.trim());
-      if(pts.length===2){const p1=ALL.find(x=>x.Player.toLowerCase()===pts[0].toLowerCase());const p2=ALL.find(x=>x.Player.toLowerCase()===pts[1].toLowerCase());
-      if(p1&&p2)return `<span class="plink" onclick="openCompare(${p1._id},${p2._id})">⚔️ ${p1.Player} vs ${p2.Player}</span>`}return m;
-    });
-
+        case 'add_player':act={id:aid,type,name:parts[1],desc:`Added ${parts[1]} to roster`};label=`+ Add ${parts[1]}`;break;
+        case 'remove_player':act={id:aid,type,name:parts[1],desc:`Removed ${parts[1]} from roster`};label=`Remove ${parts[1]}`;break;
+        case 'swap':act={id:aid,type,out:parts[1],inn:parts[2],desc:`Swapped ${parts[1]} → ${parts[2]}`};label=`⇄ Swap ${parts[1]} → ${parts[2]}`;break;
+        case 'add_team':act={id:aid,type,team:parts[1],desc:`Added ${parts[1]} players to roster`};label=`+ Add all ${parts[1]} players`;break;
+        case 'clear_roster':act={id:aid,type,desc:'Cleared roster'};label='Clear roster';break;
+        case 'set_budget':act={id:aid,type,value:parseInt(parts[1]),desc:`Set budget to $${parseInt(parts[1]).toLocaleString()}`};label=`Set budget → $${parseInt(parts[1]).toLocaleString()}`;break;
+        case 'set_max_player':act={id:aid,type,value:parseInt(parts[1]),desc:`Set max/player to $${parseInt(parts[1]).toLocaleString()}`};label=`Set max/player → $${parseInt(parts[1]).toLocaleString()}`;break;
+        case 'set_roster_size':act={id:aid,type,value:parseInt(parts[1]),desc:`Set roster size to ${parts[1]}`};label=`Set roster size → ${parts[1]}`;break;
+        case 'filter':{const fp=Object.fromEntries(parts[1].split(',').map(p=>p.split('=')));act={id:aid,type,params:fp,desc:'Applied filter'};label='→ Apply filter';break;}
+        case 'open_player':act={id:aid,type,name:parts[1],desc:`Opened ${parts[1]}'s profile`};label=`View ${parts[1]}`;break;
+        case 'compare':act={id:aid,type,p1:parts[1],p2:parts[2],desc:`Compared ${parts[1]} vs ${parts[2]}`};label=`⚔️ Compare ${parts[1]} vs ${parts[2]}`;break;
+        case 'switch_tab':act={id:aid,type,tab:parts[1],desc:`Switched to ${parts[1]} tab`};label=`Go to ${parts[1]}`;break;
+        default:return m;}
+      if(act){pendingActions.push(act);return `<span id="abtn-${aid}" class="chat-actions"><button class="chat-act confirm" onclick="execAction(${aid})" title="Approve">✅ ${label}</button><button class="chat-act reject" onclick="rejectAction(${aid})" title="Reject">❌</button></span>`;}
+      return m;});
+    html=html.replace(/\[OPEN_PLAYER:([^\]]+)\]/g,(m,name)=>{const p=ALL.find(x=>x.Player.toLowerCase()===name.toLowerCase().trim());return p?`<span class="plink" onclick="openP(${p._id})">${p.Player} (${p._np}, ${p._score})</span>`:name;});
+    html=html.replace(/\[COMPARE:([^\]]+)\]/g,(m,names)=>{const pts=names.split('|').map(n=>n.trim());if(pts.length===2){const p1=ALL.find(x=>x.Player.toLowerCase()===pts[0].toLowerCase());const p2=ALL.find(x=>x.Player.toLowerCase()===pts[1].toLowerCase());if(p1&&p2)return`<span class="plink" onclick="openCompare(${p1._id},${p2._id})">⚔️ ${p1.Player} vs ${p2.Player}</span>`}return m;});
+    html=html.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
     html=html.replace(/\n/g,'<br>');
     d.innerHTML=html;
-  } else {
-    d.textContent=text;
-  }
-  c.appendChild(d);c.scrollTop=c.scrollHeight;
-}
+  }else{d.textContent=text;}
+  c.appendChild(d);c.scrollTop=c.scrollHeight;}
 
+// ── FILTER HELPER ──
 function applyAiFilter(params){
   if(params.pos)document.getElementById('fp').value=params.pos==='all'?'all':params.pos;
   if(params.tier)document.getElementById('ft').value=params.tier==='all'?'all':params.tier;
@@ -1005,147 +1170,75 @@ function applyAiFilter(params){
   document.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.tp').forEach(x=>x.classList.remove('active'));
   document.querySelector('[data-tab="players"]').classList.add('active');
-  document.getElementById('p-players').classList.add('active');
-}
+  document.getElementById('p-players').classList.add('active');}
 
-// ── CONTEXT BUILDER ──
-function buildContext(userMsg){
-  const lower=userMsg.toLowerCase();
-  let ctx='You are Scout AI, an NCAA women\'s volleyball recruiting consultant embedded in a player valuation dashboard. You directly control the dashboard for the coach.\n\n';
-  ctx+='═══ ACTION SYSTEM ═══\n';
-  ctx+='You can propose actions using [ACTION:type|params] tags. The coach will see ✅/❌ buttons to approve or reject each action.\n\n';
-  ctx+='Available actions:\n';
-  ctx+='[ACTION:add_player|Exact Player Name] — Add a player to the roster\n';
-  ctx+='[ACTION:remove_player|Exact Player Name] — Remove a player from the roster\n';
-  ctx+='[ACTION:swap|Player To Remove|Player To Add] — Swap one roster player for another\n';
-  ctx+='[ACTION:add_team|Exact Team Name] — Add all players from a school/team (respects budget and roster size)\n';
-  ctx+='[ACTION:clear_roster] — Clear the entire roster\n';
-  ctx+='[ACTION:set_budget|Amount] — Change team budget (e.g., [ACTION:set_budget|300000])\n';
-  ctx+='[ACTION:set_max_player|Amount] — Change max per-player budget\n';
-  ctx+='[ACTION:set_roster_size|Number] — Change roster size limit\n';
-  ctx+='[ACTION:filter|pos=OH,tier=Elite] — Filter the player list\n';
-  ctx+='[ACTION:open_player|Exact Player Name] — Open a player\'s profile\n';
-  ctx+='[ACTION:compare|Player 1|Player 2] — Open side-by-side comparison\n';
-  ctx+='[ACTION:switch_tab|roster] — Switch dashboard tab (players/positions/roster/weights/valuation/methodology)\n\n';
-  ctx+='CRITICAL RULES:\n';
-  ctx+='- ALWAYS use [ACTION:...] tags for any action you propose. The coach must approve each one.\n';
-  ctx+='- Use exact player names from the data. If a name has special characters, use them.\n';
-  ctx+='- If multiple actions are needed (e.g., adding a whole team), list them all so the coach can approve all at once.\n';
-  ctx+='- If the budget or roster size is too small, FIRST propose the settings change, THEN the roster changes.\n';
-  ctx+='- When recommending swaps, explain WHY with specific stats before the action tag.\n';
-  ctx+='- You can also use [OPEN_PLAYER:Name] inline to make player names clickable without proposing an action.\n';
-  ctx+='- Dollar values are predicted valuations from our model, not actual NIL deals.\n';
-  ctx+='- Keep responses concise — coaches are busy. Put reasoning BEFORE action tags.\n';
-  ctx+='- When asked to add a team, use [ACTION:add_team|Team Name] which adds all players from that school automatically.\n\n';
-
-  // Dashboard state
-  ctx+=`═══ DASHBOARD STATE ═══\n`;
-  ctx+=`Team Budget: $${TBUDGET.toLocaleString()} | Max/Player: $${PBUDGET.toLocaleString()} | Roster Size Limit: ${RSIZE}\n`;
-
-  if(ROST.length){
-    const spent=ROST.reduce((s,p)=>s+p._val,0);
-    const posC={OH:0,MB:0,S:0,'L/DS':0,OPP:0};ROST.forEach(p=>posC[p._np]++);
-    ctx+=`\nCURRENT ROSTER (${ROST.length}/${RSIZE} players, $${spent.toLocaleString()} spent, $${(TBUDGET-spent).toLocaleString()} remaining):\n`;
-    ctx+=`Position counts: ${Object.entries(posC).map(([p,c])=>`${p}:${c}`).join(', ')} (ideal: OH:3 MB:2 S:1 L/DS:2 OPP:1)\n`;
-    const teamAvg=Math.round(ROST.reduce((s,p)=>s+p._score,0)/ROST.length);
-    ctx+=`Team average score: ${teamAvg}\n`;
-    ROST.forEach(p=>{ctx+=`  ${p.Player} | ${p._np} | ${p.Team} | Score:${p._score} | ${p._tier} | $${p._val.toLocaleString()} | K/S:${p._kps} Hit%:${(p['Hit %']||0).toFixed(3)} D/S:${p._dps} A/S:${p._aps} B/S:${p._bps} Ace/S:${p._acps}\n`});
-    // Team profile
-    const cats2={offense:['kills_per_set','hit_pct','pts_per_set'],defense:['digs_per_set'],blocking:['blk_per_set'],serving:['aces_per_set']};
-    const cs2={};for(const[cat,stats]of Object.entries(cats2)){let t=0,c=0;for(const p of ROST){const sp=gSP(p,PCT);for(const st of stats){if(sp[st]){t+=sp[st].pctile;c++}}}cs2[cat]=c?Math.round(t/c):50}
-    ctx+=`Team strengths: ${Object.entries(cs2).map(([c,s])=>`${c}:${s}th`).join(', ')}\n\n`;
-  } else {
-    ctx+='ROSTER: Empty — no players added yet.\n\n';
-  }
-
-  // Team-specific context if asking about a team
-  const teamMatches=ALL.reduce((acc,p)=>{if(!acc[p.Team])acc[p.Team]=[];acc[p.Team].push(p);return acc},{});
-  for(const[team,players]of Object.entries(teamMatches)){
-    if(lower.includes(team.toLowerCase())){
-      const sorted=[...players].sort((a,b)=>b._score-a._score);
-      const totalVal=sorted.reduce((s,p)=>s+p._val,0);
-      ctx+=`\n${team.toUpperCase()} PLAYERS (${sorted.length} total, combined value $${totalVal.toLocaleString()}):\n`;
-      sorted.forEach(p=>{ctx+=`  ${p.Player} | ${p._np} | Score:${p._score} | ${p._tier} | $${p._val.toLocaleString()} | K/S:${p._kps} Hit%:${(p['Hit %']||0).toFixed(3)} D/S:${p._dps} A/S:${p._aps} B/S:${p._bps}\n`});
-      ctx+='\n';
-      break; // Only include one team's full roster to save tokens
-    }
-  }
-
-  // Player-specific context
-  const mentioned=[];
-  for(const p of ALL){
-    const pLow=p.Player.toLowerCase();const last=p.Player.split(' ').pop().toLowerCase();
-    if(lower.includes(pLow)||(last.length>3&&lower.includes(last)))mentioned.push(p);
-  }
-  const topN=[...ALL].sort((a,b)=>b._score-a._score).slice(0,10);
-  const relevant=[...new Map([...mentioned,...topN].map(p=>[p._id,p])).values()];
-  if(relevant.length){
-    ctx+='RELEVANT PLAYERS:\n';
-    relevant.slice(0,25).forEach(p=>{
-      const hist2=HIST[p.Player];const histStr=hist2&&hist2.length>1?` | History: ${hist2.map(h=>`${h.Season}@${h.Team}`).join('→')}`:'';
-      ctx+=`  ${p.Player} | ${p._np} | ${p.Team} | Score:${p._score} | ${p._tier} | $${p._val.toLocaleString()} | K/S:${p._kps} Hit%:${(p['Hit %']||0).toFixed(3)} D/S:${p._dps} A/S:${p._aps} B/S:${p._bps} Ace/S:${p._acps} | Sets:${p.Sets}${histStr}\n`;
-    });
-  }
-
-  // Position-specific context
-  for(const[pos,name]of Object.entries(PN)){
-    if(lower.includes(pos.toLowerCase())||lower.includes(name.toLowerCase())){
-      const top5=[...ALL].filter(p=>p._np===pos).sort((a,b)=>b._score-a._score).slice(0,8);
-      ctx+=`\nTOP ${pos} (${name}):\n`;
-      top5.forEach(p=>{ctx+=`  ${p.Player} | ${p.Team} | Score:${p._score} | $${p._val.toLocaleString()} | K/S:${p._kps} D/S:${p._dps} B/S:${p._bps}\n`});
-    }
-  }
-
-  return ctx;
-}
+// ── SYSTEM PROMPT ──
+function buildSystemPrompt(){
+  return 'You are Scout AI, an NCAA women\'s volleyball recruiting consultant embedded in a player valuation dashboard. You directly control the dashboard for the coach.\n\n'+
+  '═══ ACTION SYSTEM ═══\n'+
+  'Propose actions using [ACTION:type|params] tags — the coach approves or rejects each one.\n\n'+
+  'Available actions:\n'+
+  '[ACTION:add_player|Exact Player Name] — Add to roster\n'+
+  '[ACTION:remove_player|Exact Player Name] — Remove from roster\n'+
+  '[ACTION:swap|Player To Remove|Player To Add] — Swap players\n'+
+  '[ACTION:add_team|Exact Team Name] — Add all players from a school (respects budget)\n'+
+  '[ACTION:clear_roster] — Clear roster\n'+
+  '[ACTION:set_budget|Amount] — Change team budget\n'+
+  '[ACTION:set_max_player|Amount] — Change max per-player budget\n'+
+  '[ACTION:set_roster_size|Number] — Change roster size limit\n'+
+  '[ACTION:filter|pos=OH,tier=Elite] — Filter the player list\n'+
+  '[ACTION:open_player|Exact Player Name] — Open player profile modal\n'+
+  '[ACTION:compare|Player 1|Player 2] — Side-by-side comparison\n'+
+  '[ACTION:switch_tab|roster] — Switch tab (players/positions/roster/weights/valuation/methodology)\n\n'+
+  'RULES:\n'+
+  '- Always use [ACTION:...] tags for any change. Explain WHY with stats first.\n'+
+  '- Use exact player names from tool results. Dollar values are model predictions, not actual NIL deals.\n'+
+  '- Use tools before recommending players. Never guess stats.\n'+
+  '- Positions: OH=Outside Hitter, MB=Middle Blocker, S=Setter, L/DS=Libero, OPP=Opposite Hitter\n'+
+  '- Ideal lineup: OH:3 MB:2 S:1 L/DS:2 OPP:1 (9 minimum)\n'+
+  '- Keep responses concise — coaches are busy.\n'+
+  '- COMPARE RULE: When asked to compare two players, ALWAYS: (1) call get_player_profile for each player to get their stats, (2) give a brief text summary of key differences, (3) end with [ACTION:compare|Exact Name 1|Exact Name 2] to open the visual side-by-side comparison modal. Never show comparison as plain text only — the visual modal must always be offered.';}
 
 // ── SEND MESSAGE ──
 async function sendChat(preset){
   const inp=document.getElementById('chatInput');
-  const msg=preset||inp.value.trim();
-  if(!msg)return;
+  const msg=preset||inp.value.trim();if(!msg)return;
   inp.value='';addMsg('user',msg);
   document.getElementById('chatSend').disabled=true;
-
+  // Reset per-turn state
+  lastUserText=msg;turnHasDashboardLookup=false;turnWebSearchDeferred=false;
+  turnHasWebSearch=false;turnForcedWebForValuation=false;
   const typing=document.createElement('div');typing.className='chat-typing';typing.textContent='Scout AI is thinking...';
   document.getElementById('chatMsgs').appendChild(typing);
   document.getElementById('chatMsgs').scrollTop=document.getElementById('chatMsgs').scrollHeight;
-
-  const sysCtx=buildContext(msg);
-  const contents=[];
-  const recentHist=chatHist.slice(-10);
-  if(recentHist.length){
-    contents.push({role:'user',parts:[{text:sysCtx}]});
-    contents.push({role:'model',parts:[{text:'Ready to help, Coach. I can control the dashboard directly — just tell me what you need and I\'ll propose actions for your approval.'}]});
-    for(const h of recentHist)contents.push({role:h.role==='user'?'user':'model',parts:[{text:h.text}]});
-    contents.push({role:'user',parts:[{text:msg}]});
-  } else {
-    contents.push({role:'user',parts:[{text:sysCtx+'\n\nThe coach says: "'+msg+'"'}]});
-  }
-  chatHist.push({role:'user',text:msg});
-
   try{
-    const resp=await fetch(GEMINI_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents,generationConfig:{maxOutputTokens:2048,temperature:0.7}})});
-    const data=await resp.json();
+    // Init history with system prompt on first message
+    if(!chatHist.length){
+      chatHist.push({role:'user',parts:[{text:buildSystemPrompt()}]});
+      chatHist.push({role:'model',parts:[{text:'Ready to help, Coach! I can query player data, roster, and web sources to give the best recommendations. What do you need?'}]});}
+    const usePipeline=needsMandatoryWebReview(msg);
+    const isNews=/\b(latest|recent|today|news|injur|hurt|suspend|transfer|portal|return|rumor|update|status|coach|minutes|role|lineup|starter|starting)\b/.test(msg.toLowerCase());
+    const fmt=usePipeline?(isNews
+      ?'\n\nRespond with:\n**Dashboard data:** [key stats]\n**Web context:** [news found]\n**Summary:** [answer]'
+      :'\n\nRespond with:\n**Dashboard evidence:** [score/value/tier]\n**Web evidence:** [NIL/market data]\n**Comparison:** [analysis]\n**Verdict:** steal | fair | overpay | avoid')
+      :'';
+    // Push user message (with format hint if pipeline)
+    chatHist.push({role:'user',parts:[{text:msg+fmt}]});
+    let finalText;
+    if(usePipeline){
+      const data=await runValuationComparePipeline(msg);
+      finalText=await processResp(data);
+    }else{
+      const data=await callGemini(null);
+      finalText=await processResp(data);}
     typing.remove();
-
-    if(data.candidates&&data.candidates[0]&&data.candidates[0].content){
-      const aiText=data.candidates[0].content.parts.map(p=>p.text).join('');
-      chatHist.push({role:'ai',text:aiText});
-      addMsg('ai',aiText);
-    } else if(data.error){
-      addMsg('ai','Error: '+(data.error.message||JSON.stringify(data.error)));
-    } else {
-      addMsg('ai','No response received. Try rephrasing your question.');
-    }
+    chatHist.push({role:'model',parts:[{text:finalText}]});
+    addMsg('ai',finalText);
   }catch(err){
     typing.remove();
     addMsg('ai','Connection error: '+err.message);
-  }
-  document.getElementById('chatSend').disabled=false;
-  inp.focus();
-}
+    console.error('Scout AI error:',err);}
+  document.getElementById('chatSend').disabled=false;inp.focus();}
 </script>
 </body>
 </html>
