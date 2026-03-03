@@ -65,126 +65,68 @@ Ask before changing:
 Lives in `// AI CHAT — JARVIS MODE (Gemini)` at ~L857.
 
 ### Architecture
-- **Simple prompt injection** (no Gemini function calling). `buildContext(userMsg)` assembles a large system-prompt string with dashboard state, roster, relevant players, and top-by-position data, then sends it with the conversation history to Gemini via `GEMINI_URL`.
-- **Action tag protocol**: Gemini returns `[ACTION:type|params]` tags in its text. `addMsg()` parses these into approve/reject buttons in the chat UI.
-- **Conversation history**: `chatHist` array (last 10 turns sent as `contents`).
+- **Gemini function calling** with `AI_TOOLS` array passed in every API call.
+- **Dynamic system prompt**: `sysPrompt()` returns `{parts:[{text}]}` with live roster state, sent as `systemInstruction` (separate from `contents`). Uses string concatenation — NOT template literals (HTML JS parser chokes on multi-line template literals with `${...}`).
+- **Confirmation flow**: `CONFIRM_ACTIONS` set gates roster mutations behind Yes/No buttons.
+- **Dashboard-first enforcement**: `processResp` defers `web_search` until after at least one dashboard tool has run.
+- **Dual-source pipeline**: `runValuationComparePipeline` for valuation/news queries.
+- **Action tags**: `[ACTION:filter|...]`, `[ACTION:open_player|...]`, `[ACTION:compare|...]`, `[ACTION:switch_tab|...]`, `[ACTION:settings]` still supported for non-roster actions in `execAction`.
 
-### Action types currently supported
-| Action tag | Effect |
+### Gemini function calling tools (`AI_TOOLS`)
+| Tool | Description |
 |---|---|
-| `[ACTION:add_player\|Name]` | Adds player to `ROST` |
-| `[ACTION:remove_player\|Name]` | Removes player from `ROST` |
-| `[ACTION:swap\|Out\|In]` | Swaps one roster player for another |
-| `[ACTION:add_team\|Team Name]` | Adds entire team within budget |
-| `[ACTION:clear_roster]` | Clears `ROST` |
-| `[ACTION:set_budget\|Amount]` | Sets `TBUDGET` |
-| `[ACTION:set_max_player\|Amount]` | Sets `PBUDGET` |
-| `[ACTION:set_roster_size\|N]` | Sets `RSIZE` |
-| `[ACTION:filter\|pos=OH,tier=Elite]` | Calls `applyAiFilter` |
-| `[ACTION:open_player\|Name]` | Opens player profile modal |
-| `[ACTION:compare\|P1\|P2]` | Opens side-by-side comparison |
-| `[ACTION:switch_tab\|tabname]` | Switches active tab |
+| `get_dashboard_context` | Returns overall pool stats + current roster summary |
+| `get_player_profile(name)` | Returns full stat line + score + tier + tags |
+| `search_players(query, position?, maxValue?, sortBy?, limit?)` | Filter/keyword search across `ALL` |
+| `get_top_players(position?, tier?, sortBy?, limit?)` | Top N players by criteria |
+| `web_search(query)` | Routes through `GEMINI_URL` Cloudflare Worker proxy |
+| `compare_players(player1, player2)` | Opens side-by-side compare modal directly |
+| `add_players_to_roster(playerNames[], team?, limit?)` | Adds players; auto-expands RSIZE/PBUDGET/TBUDGET if needed |
+| `remove_player_from_roster(playerName)` | Removes one player from roster |
+| `swap_roster_player(dropPlayer, addPlayer)` | Swaps roster slot with swap validation guard |
 
-### Context injected per turn (`buildContext`)
-1. Role + action system instructions
-2. Dashboard state: budget, roster, position counts, team average score, team strength profile
-3. Team roster (if user mentions a team name)
-4. Relevant players (name-matched from query + top-10 by score)
-5. Top 8 players per position (if user mentions a position name)
-
----
-
-## AI Chat features to develop — porting from basketball-dashboard
-
-These features exist in the basketball-dashboard's skills.md and need to be built into this repo. They add **Gemini function calling** and a **deterministic dual-source pipeline** (dashboard-first, then web search) for valuation and player-status queries.
-
-### 1. Per-turn state variables
-Add to the AI CHAT section (reset at top of `sendChat` and on clear):
-- `lastUserText` — captures current user prompt for tool-orchestration fallback
-- `turnHasDashboardLookup` — true after any non-web tool executes this turn
-- `turnWebSearchDeferred` — one-shot latch; prevents infinite deferral loops
-- `turnHasWebSearch` — true after any `web_search` executes
-- `turnForcedWebForValuation` — one-shot latch; forces one post-dashboard web lookup
-
-### 2. Gemini function calling (tool declarations)
-Replace the current simple `contents` send with a Gemini API call that includes a `tools` array. Required tool schemas:
-- `get_dashboard_context` — returns overall pool stats + current roster
-- `get_player_profile(name)` — returns full stat line + score + tier + tags for a player
-- `search_players(query, position?, maxValue?, sortBy?, limit?)` — keyword/filter search across all players
-- `get_top_players(position?, tier?, sortBy?, limit?)` — top N players by criteria
-- `web_search(query)` — routes through `GEMINI_URL` to a Google Custom Search or SerpAPI endpoint
-
-All dashboard tools must read from `ALL` (all loaded players), not just filtered view.
-
-### 3. `pushFnResult(name, args, result)`
-Injects synthetic `functionCall` + `functionResponse` pairs into `chatHistory`. Used to preload dashboard tool outputs before allowing `web_search`.
-
-**History structure rule**: The original user message (with format instructions) must be pushed to `chatHistory` first, before any `pushFnResult` calls. The final Gemini call must use `callGemini(null)` (not appending another user turn) to avoid the "function call turn must come immediately after a user turn" API error.
-
-Valid turn structure:
-```
-user: text("Is X worth $200k? ...format instructions...")
-model: functionCall(get_dashboard_context)
-user: functionResponse(get_dashboard_context)
-model: functionCall(get_player_profile)
-user: functionResponse(get_player_profile)
-model: functionCall(web_search)
-user: functionResponse(web_search)
-← callGemini(null) fires here
-```
-
-### 4. `needsMandatoryWebReview(text)` — dual-trigger gate
-Returns `true` when web search is required before a final answer.
-
-- **Search/filter guard (checked first)**: if the query contains `find`, `search`, `show`, `list`, `get`, `recommend`, or `suggest`, treat as a player-search request — suppress valuation trigger, go through normal tool path (e.g. `get_top_players`).
-- **Valuation trigger** (only when NOT a search request): keywords `$`, `worth`, `valuat`, `invest`, `overpay`, `underpay`, `fair`, `steal`, `avoid`, `buy`, `sign`, `price`, `priced`, `pay`.
-- **Current status / news trigger** (always): keywords `latest`, `recent`, `today`, `yesterday`, `this week`, `last week`, `news`, `injur`, `hurt`, `suspend`, `transfer`, `portal`, `available`, `availability`, `out for`, `return`, `rumor`, `report`, `update`, `status`, `commit`, `nil`, `coaching`, `coach`, `minutes`, `role`, `lineup`, `starter`, `starting`.
-
-### 5. `buildForcedWebQuery(text)` — intent-aware query builder
-Builds Google search query for forced web passes. Tailors to question type:
-- **Valuation + player name match** → `"[name] college volleyball NIL salary contract value 2025"`
-- **News/status + player name match** → `"[name] college volleyball latest news injury transfer portal 2025"`
-- **Valuation, no name match** → `"[raw query] college volleyball NIL value market 2025"`
-- **News, no name match** → `"[raw query] college volleyball latest news 2025"`
-
-Use a `normalizeName(s)` helper (strips `.,` punctuation and `Jr/Sr/II/III/IV` suffixes) for name matching in both this function and `matchLoadedPlayerName`.
-
-### 6. `runValuationComparePipeline(userText)` — deterministic dual-source pipeline
-Invoked from `sendChat` **before** the free-form Gemini path. Runs when `needsMandatoryWebReview` is true.
+### CONFIRM_ACTIONS (roster mutations require Yes/No)
+`const CONFIRM_ACTIONS = new Set(['add_players_to_roster','remove_player_from_roster','swap_roster_player'])`
 
 Flow:
-1. **Dashboard pass** (only when players are loaded):
-   - Inject `get_dashboard_context` → set `turnHasDashboardLookup = true`.
-   - If player name found in prompt → inject `get_player_profile`.
-   - Otherwise → inject `search_players` results.
-   - Render evidence in chat UI (`renderDashboardEvidence`).
-2. **Web pass** (always):
-   - Call `buildForcedWebQuery` → run `doWebSearch` → inject `web_search` result → set `turnHasWebSearch = true`.
-   - Render evidence in chat UI (`renderWebEvidence`).
-3. **Combined verdict**: call Gemini with structured format prompt:
-   - **Valuation** → `Dashboard evidence / Web evidence / Comparison / Verdict: steal|fair|overpay|avoid`
-   - **News/status** → `Dashboard data / Web context / Summary`
+1. `processResp` receives function call in `CONFIRM_ACTIONS`
+2. **Swap guard**: if `swap_roster_player.addPlayer` not found in `ALL` → inject error + candidates + re-query Gemini
+3. Store `pendingAction = {call, modelParts}` → pause conversation
+4. Render Yes/No confirm buttons (`addMsg('system', html)`)
+5. User clicks Yes/No OR types yes/no → `executeConfirm(bool)` → `window._aiConfirm(bool)`
+6. Confirmed → `execCall` → push `modelParts` + `functionResponse` to `chatHist` → `callGemini(null)` → `processResp`
 
-Fail-open: any step that throws should log and continue so the chat doesn't dead-end.
+### Per-turn state variables (reset in `doSend`)
+- `lastUserText` — current user prompt for orchestration fallback
+- `turnHasDashboardLookup` — true after any non-web tool runs
+- `turnWebSearchDeferred` — one-shot latch; prevents infinite deferral
+- `turnHasWebSearch` — true after `web_search` runs
+- `turnForcedWebForValuation` — one-shot latch for forced post-dashboard web pass
 
-### 7. Runtime enforcement in `processResp`
-When a `functionCall` arrives during normal Gemini turns:
-1. If call is `web_search` AND `!turnHasDashboardLookup` AND `!turnWebSearchDeferred`:
-   - Inject `get_dashboard_context` + `get_player_profile`/`search_players`.
-   - Re-call Gemini with injected local context (Gemini can then call `web_search` next).
-   - Set `turnWebSearchDeferred = true`.
-2. After dashboard lookup: if Gemini returns text-only and `needsMandatoryWebReview(lastUserText)` is true and `!turnHasWebSearch` → force one `web_search` pass (`turnForcedWebForValuation` latch).
+### `needsMandatoryWebReview(text)` gate
+- **Search/filter guard (checked first)**: `find`/`search`/`show`/`list`/`get`/`recommend`/`suggest` → normal tool path
+- **Valuation trigger**: `$`/`worth`/`valuat`/`invest`/`overpay`/`underpay`/`fair`/`steal`/`avoid`/`buy`/`sign`/`price`/`pay`
+- **News/status trigger**: `latest`/`recent`/`today`/`news`/`injur`/`transfer`/`portal`/`available`/`rumor`/`status`/`commit`/`nil`/etc.
 
-### 8. Evidence rendering
-- `renderDashboardEvidence(playerData)` — renders a collapsed evidence card in chat showing dashboard stats used.
-- `renderWebEvidence(webData)` — renders a collapsed evidence card in chat showing web snippet used.
+### `runValuationComparePipeline` — deterministic dual-source pipeline
+1. Dashboard pass: inject `get_dashboard_context` → `get_player_profile` (if name found) or `search_players` → `renderDashboardEvidence`
+2. Web pass: `buildForcedWebQuery` → `doWebSearch` → inject `web_search` result → `renderWebEvidence`
+3. Combined Gemini call with structured verdict format
 
-### Maintenance rules (once built)
-- Do **not** remove the `processResp` web-search deferral guard unless replaced by equivalent deterministic orchestration.
-- If new dashboard read tools are added, set `turnHasDashboardLookup = true` when they execute.
-- Keep the fail-open path for web search to preserve UX resilience on tool errors.
-- If tool schema names change, update both the `tools` declarations and all guard/injection references.
-- Any function querying the player pool must use `ALL` (full loaded set), never a filtered view variable.
+### Key helpers
+- `escapeHtml(s)` — HTML entity escape
+- `fmtText(t)` — markdown (`**bold**`) + `\n`→`<br>` + player name hyperlinks to `openP(id)`
+- `extractTeamHint(text)` — parses `"from X"` / `"(X)"` team hints from text
+- `matchLoadedPlayer(text)` — returns full player row with team disambiguation
+- `statLine(r)` — structured volleyball stat summary for a player row
+
+### Maintenance rules
+- Do **not** remove the `processResp` web-search deferral guard.
+- If new dashboard read tools are added, set `turnHasDashboardLookup=true` when they execute.
+- Keep fail-open for web search errors (log, don't dead-end the UI).
+- Tool schema names must stay in sync between `AI_TOOLS` declarations, `execCall` dispatcher, and all guard references.
+- Any function querying the player pool must use `ALL`, never `FILT`.
+- Use string concatenation (not template literals) for all multi-line dynamic strings in `<script>` blocks.
 
 ---
 
