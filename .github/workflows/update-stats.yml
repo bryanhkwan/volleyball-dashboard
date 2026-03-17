@@ -1,0 +1,76 @@
+name: Update NCAA Volleyball Stats
+
+on:
+  # Run every Sunday at 3am UTC (off-peak, after weekend matches)
+  schedule:
+    - cron: "0 3 * * 0"
+
+  # Also allow manual trigger from the GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      division:
+        description: "NCAA Division (1, 2, or 3)"
+        required: false
+        default: "1"
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write   # needed to commit data/players.json back to repo
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('scripts/requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Run scraper
+        run: |
+          cd ${{ github.workspace }}
+          python scripts/scraper.py
+        env:
+          PYTHONUNBUFFERED: "1"
+
+      - name: Check output file exists
+        run: |
+          if [ ! -f data/players.json ]; then
+            echo "ERROR: data/players.json was not created"
+            exit 1
+          fi
+          PLAYER_COUNT=$(python3 -c "import json; d=json.load(open('data/players.json')); print(d['meta']['count'])")
+          echo "Player count: $PLAYER_COUNT"
+          if [ "$PLAYER_COUNT" -lt 100 ]; then
+            echo "ERROR: Too few players scraped ($PLAYER_COUNT). Something went wrong."
+            exit 1
+          fi
+
+      - name: Commit updated data
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/players.json
+          # Only commit if there are actual changes
+          if git diff --staged --quiet; then
+            echo "No changes to data/players.json — skipping commit"
+          else
+            TIMESTAMP=$(date -u "+%Y-%m-%d %H:%M UTC")
+            PLAYER_COUNT=$(python3 -c "import json; d=json.load(open('data/players.json')); print(d['meta']['count'])")
+            git commit -m "data: update player stats — $PLAYER_COUNT players ($TIMESTAMP)"
+            git push
+          fi

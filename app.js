@@ -121,97 +121,72 @@ function processData(raw){
   // Sort each player's history by season
   for(const name of Object.keys(HIST))HIST[name].sort((a,b)=>a.Season-b.Season);
 
-  // Filter to 2025 only for scoring/ranking
-  const pl=raw.filter(r=>(parseFloat(r.Season)||0)===2025).map((r,i)=>{r._np=nP(r.Pos);r._id=i;r['Hit %']=parseFloat(r['Hit %'])||0;r.Sets=parseFloat(r.Sets)||0;r.Matches=parseFloat(r.Matches)||0;r.Kills=parseFloat(r.Kills)||0;r['Atk Err']=parseFloat(r['Atk Err'])||0;r.Atk=parseFloat(r.Atk)||0;r.Assists=parseFloat(r.Assists)||0;r.Aces=parseFloat(r.Aces)||0;r['Serv Err']=parseFloat(r['Serv Err'])||0;r.Digs=parseFloat(r.Digs)||0;r['Total Blk']=parseFloat(r['Total Blk'])||0;r['BH Err']=parseFloat(r['BH Err'])||0;r.PTS=parseFloat(r.PTS)||0;return r}).filter(p=>W[p._np]&&p.Sets>=15);
+  // Auto-detect latest season in the data (no hardcoded year)
+  const latestSeason=Math.max(...raw.map(r=>parseFloat(r.Season)||0));
+  const pl=raw.filter(r=>(parseFloat(r.Season)||0)===latestSeason).map((r,i)=>{r._np=nP(r.Pos);r._id=i;r['Hit %']=parseFloat(r['Hit %'])||0;r.Sets=parseFloat(r.Sets)||0;r.Matches=parseFloat(r.Matches)||0;r.Kills=parseFloat(r.Kills)||0;r['Atk Err']=parseFloat(r['Atk Err'])||0;r.Atk=parseFloat(r.Atk)||0;r.Assists=parseFloat(r.Assists)||0;r.Aces=parseFloat(r.Aces)||0;r['Serv Err']=parseFloat(r['Serv Err'])||0;r.Digs=parseFloat(r.Digs)||0;r['Total Blk']=parseFloat(r['Total Blk'])||0;r['BH Err']=parseFloat(r['BH Err'])||0;r.PTS=parseFloat(r.PTS)||0;return r}).filter(p=>W[p._np]&&p.Sets>=15);
   const seen={},ded=[];for(const p of pl){if(seen[p.Player]){if(p.Sets>(seen[p.Player].Sets||0)){ded[ded.indexOf(seen[p.Player])]=p;seen[p.Player]=p}}else{seen[p.Player]=p;ded.push(p)}}
   return ded}
 
 function calcAll(){PCT=bPc(ALL);for(const p of ALL){p._score=scoreP(p,PCT);p._tier=gTier(p._score);p._val=gVal(p);p._tags=gTags(p);const s=Math.max(p.Sets||1,1);p._kps=((p.Kills||0)/s).toFixed(2);p._dps=((p.Digs||0)/s).toFixed(2);p._aps=((p.Assists||0)/s).toFixed(2);p._bps=((p['Total Blk']||0)/s).toFixed(2);p._acps=((p.Aces||0)/s).toFixed(2);p._pps=((p.PTS||0)/s).toFixed(2)}}
 function recalc(){calcAll();applyF()}
 
-// GOOGLE SHEETS CONFIG
-const SHEET_ID='1GW4mO-9XPES8eovL4LoiGCrgwl8XlPdxLBc7HKkJclw';
-const API_KEY='AIzaSyBUb41lyf4Lgh-NUAWwLiOMLdKBFZ6SwyY';
-const SHEET_NAME='Sheet1';
+// ─── DATA SOURCE: stats.ncaa.org (via data/players.json) ───────────────────
+// Populated weekly by scripts/scraper.py via GitHub Actions.
+// To refresh manually: python scripts/scraper.py
+const DATA_URL='./data/players.json';
 
-async function fetchSheet(){
+async function fetchData(){
   const status=document.getElementById('load-status');
   const errEl=document.getElementById('load-error');
   try{
-    status.textContent='Fetching data from Google Sheets...';
-    const url=`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}?key=${API_KEY}`;
-    const resp=await fetch(url);
-    if(!resp.ok){
-      // Try common sheet names
-      for(const name of ['Master','Data','2025','Sheet 1']){
-        const url2=`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(name)}?key=${API_KEY}`;
-        const resp2=await fetch(url2);
-        if(resp2.ok){const data=await resp2.json();return parseSheetData(data,status)}
-      }
-      throw new Error(`Sheet API returned ${resp.status}. Check that the spreadsheet is shared publicly.`);
+    status.textContent='Loading player data...';
+    const resp=await fetch(DATA_URL+'?t='+Date.now());
+    if(!resp.ok)throw new Error(`HTTP ${resp.status} loading ${DATA_URL}`);
+    const json=await resp.json();
+
+    // Handle empty / not-yet-populated file
+    if(!json.players||json.players.length===0){
+      throw new Error(
+        'Player data file is empty. Run the scraper first:\n  python scripts/scraper.py\n'+
+        'Or trigger the "Update NCAA Volleyball Stats" GitHub Action.'
+      );
     }
-    const data=await resp.json();
-    parseSheetData(data,status);
+
+    // Show data freshness in status
+    const updated=json.meta?.updated||'';
+    const dateStr=updated?new Date(updated).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';
+    const inferred=json.meta?.posInferred||0;
+    status.textContent=`Processing ${json.players.length} players${dateStr?' (updated '+dateStr+')':''}...`;
+
+    // Store meta for display
+    window._dataMeta=json.meta||{};
+
+    setTimeout(()=>{
+      // processData auto-detects the latest season in the data
+      ALL=processData(json.players);calcAll();FILT=[...ALL];
+      status.textContent='Done!';
+      setTimeout(()=>{
+        document.getElementById('US').style.display='none';
+        document.getElementById('DB').style.display='block';
+        initD();
+        // Show position-inferred notice if applicable
+        if(inferred>0){
+          const pct=Math.round(inferred/json.players.length*100);
+          console.info(`[data] ${inferred} positions inferred from stats (${pct}% of players). Run scraper to improve.`);
+        }
+      },300);
+    },50);
   }catch(err){
     document.getElementById('spinner').style.display='none';
     status.style.display='none';
     errEl.style.display='block';
-    errEl.textContent='Error: '+err.message;
+    errEl.innerHTML='<b>Data load error:</b><br>'+err.message.replace(/\n/g,'<br>')
+      +'<br><br><small>Run <code>python scripts/scraper.py</code> to populate data.</small>';
   }
-}
-
-function parseSheetData(data,status){
-  status.textContent='Parsing rows...';
-  const rows=data.values;
-  if(!rows||rows.length<2)throw new Error('No data found in sheet');
-  const headers=rows[0];
-  const raw=[];
-  // Map headers to expected column names
-  const hMap={};
-  const expected=['Season','Player','Pos','Team','Sets','Matches','Kills','Atk Err','Atk','Hit %','Assists','Aces','Serv Err','Digs','Total Blk','Solo Blk','Blk Ast','Blk Err','BH Err','PTS'];
-  headers.forEach((h,i)=>{
-    const clean=h.trim();
-    if(expected.includes(clean))hMap[clean]=i;
-    // Fuzzy match
-    else if(clean.toLowerCase().includes('hit'))hMap['Hit %']=i;
-    else if(clean.toLowerCase()==='total blk'||clean.toLowerCase()==='total blocks')hMap['Total Blk']=i;
-    else if(clean.toLowerCase()==='atk err'||clean.toLowerCase()==='attack errors')hMap['Atk Err']=i;
-    else if(clean.toLowerCase()==='serv err'||clean.toLowerCase()==='service errors')hMap['Serv Err']=i;
-    else if(clean.toLowerCase()==='bh err'||clean.toLowerCase()==='ball handling errors')hMap['BH Err']=i;
-    else if(clean.toLowerCase()==='blk err'||clean.toLowerCase()==='block errors')hMap['Blk Err']=i;
-    else if(clean.toLowerCase()==='blk ast'||clean.toLowerCase()==='block assists')hMap['Blk Ast']=i;
-    else if(clean.toLowerCase()==='solo blk'||clean.toLowerCase()==='solo blocks')hMap['Solo Blk']=i;
-  });
-  
-  for(let i=1;i<rows.length;i++){
-    const r=rows[i];
-    const obj={};
-    for(const[key,idx]of Object.entries(hMap)){
-      let val=r[idx];
-      if(val===undefined||val===null||val==='')val=key==='Player'||key==='Team'||key==='Pos'?'':'0';
-      // Convert numeric fields
-      if(!['Player','Team','Pos'].includes(key)){
-        val=parseFloat(String(val).replace(/,/g,''))||0;
-      }
-      obj[key]=val;
-    }
-    if(obj.Player&&obj.Pos)raw.push(obj);
-  }
-  
-  status.textContent=`Processing ${raw.length} rows...`;
-  setTimeout(()=>{
-    ALL=processData(raw);calcAll();FILT=[...ALL];
-    status.textContent='Done!';
-    setTimeout(()=>{
-      document.getElementById('US').style.display='none';
-      document.getElementById('DB').style.display='block';
-      initD();
-    },300);
-  },50);
 }
 
 // Auto-load on page ready
-document.addEventListener('DOMContentLoaded',fetchSheet);
+document.addEventListener('DOMContentLoaded',fetchData);
 
 // DASHBOARD
 function initD(){document.getElementById('tpc').textContent=ALL.length.toLocaleString();document.getElementById('ttc').textContent=new Set(ALL.map(p=>p.Team)).size;
