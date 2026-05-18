@@ -468,25 +468,37 @@ const analytics = {
 
     // ---------- setters ----------
 
-    calculateSetterChemistry: (setters, players) => {
+    calculateSetterChemistry: (setters, players, opts = {}) => {
+        const sample = opts.sample || 'all';
+        const pickPlayerEntries = (player) => {
+            if (sample === 'practice') return analytics._collapseByRealSession(player.practices || []);
+            if (sample === 'exhibition') return analytics._collapseByRealSession(player.exhibitions || []);
+            return [
+                ...(analytics._collapseByRealSession(player.practices || [])),
+                ...(analytics._collapseByRealSession(player.exhibitions || []))
+            ];
+        };
+        const pickSetterEntries = (setterData) => {
+            if (sample === 'practice') return setterData.practices || [];
+            if (sample === 'exhibition') return setterData.exhibitions || [];
+            return [
+                ...(setterData.practices || []),
+                ...(setterData.exhibitions || [])
+            ];
+        };
+
         const chemistry = {};
         const playerInfo = {};
         players.forEach(p => {
             playerInfo[p.name] = Object.assign({}, p, {
-                baselineAttackPct: analytics._weightedStat([
-                    ...(analytics._collapseByRealSession(p.practices || [])),
-                    ...(analytics._collapseByRealSession(p.exhibitions || []))
-                ], 'attack_pct')
+                baselineAttackPct: analytics._weightedStat(pickPlayerEntries(p), 'attack_pct')
             });
         });
 
         Object.keys(setters).forEach(setterName => {
             chemistry[setterName] = {};
             const setterData = setters[setterName];
-            const allSessions = [
-                ...(setterData.practices || []),
-                ...(setterData.exhibitions || [])
-            ];
+            const allSessions = pickSetterEntries(setterData);
 
             allSessions.forEach(session => {
                 (session.players || []).forEach(playerStat => {

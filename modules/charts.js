@@ -237,6 +237,14 @@ const charts = {
             });
         });
         const hitters = Array.from(hitterSet);
+        const el = document.getElementById(elementId);
+        if (!hitters.length) {
+            if (el) {
+                Plotly.purge(el);
+                el.innerHTML = '<p class="chart-empty">Not enough setter-hitter attack data for this sample.</p>';
+            }
+            return;
+        }
 
         // Sort columns so the biggest average positive lift is on the left.
         hitters.sort((a, b) => {

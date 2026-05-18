@@ -8,21 +8,68 @@
 //   * Each setter card shows practice vs game splits.
 
 const settersModule = {
-    init: () => {},
+    chemistryFilter: 'all',
+
+    sampleLabels: {
+        all: 'all-session',
+        practice: 'practice-only',
+        exhibition: 'exhibition-only'
+    },
+
+    init: () => {
+        const filter = document.getElementById('setterChemistryFilter');
+        if (!filter) return;
+
+        filter.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-chemistry-filter]');
+            if (!btn) return;
+            settersModule.chemistryFilter = btn.dataset.chemistryFilter || 'all';
+            settersModule.syncChemistryFilterButtons();
+
+            const view = document.getElementById('settersView');
+            if (view && view.classList.contains('active')) {
+                settersModule.renderSetterView();
+            }
+        });
+    },
 
     renderSetterView: () => {
         const setters = window.dataModule.getAllSetters();
         const players = window.dataModule.getAllPlayers();
+        const sample = settersModule.chemistryFilter || 'all';
+        const sampleLabel = settersModule.sampleLabels[sample] || settersModule.sampleLabels.all;
 
         settersModule.renderComparisonTable(setters);
 
-        const chemistry = analytics.calculateSetterChemistry(setters, players);
+        settersModule.syncChemistryFilterButtons();
+        settersModule.renderChemistrySubtitles(sampleLabel);
+
+        const chemistry = analytics.calculateSetterChemistry(setters, players, { sample });
         charts.renderChemistryMatrix('chemistryMatrix', chemistry);
         settersModule.renderBestPairings(chemistry);
 
         settersModule.renderSetterCard('gabbiStats',   'Gabbi',   setters.Gabbi);
         settersModule.renderSetterCard('janelleStats', 'Janelle', setters.Janelle);
         settersModule.renderSetterCard('maddyStats',   'Maddy',   setters.Maddy);
+    },
+
+    syncChemistryFilterButtons: () => {
+        document.querySelectorAll('[data-chemistry-filter]').forEach(btn => {
+            const active = btn.dataset.chemistryFilter === settersModule.chemistryFilter;
+            btn.classList.toggle('active', active);
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+    },
+
+    renderChemistrySubtitles: (sampleLabel) => {
+        const best = document.getElementById('bestPairingsSubtitle');
+        if (best) {
+            best.textContent = `Best lift over each hitter's ${sampleLabel} attack baseline.`;
+        }
+        const matrix = document.getElementById('chemistryMatrixSubtitle');
+        if (matrix) {
+            matrix.textContent = `How much each setter raises or lowers each hitter from the ${sampleLabel} baseline. Hover for details.`;
+        }
     },
 
     renderComparisonTable: (setters) => {

@@ -414,6 +414,38 @@ select:focus {
     font-size: 12px; color: var(--muted);
     font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
 }
+.setter-chemistry-controls {
+    margin-top: -6px;
+}
+.segmented-control {
+    display: inline-flex;
+    padding: 3px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    gap: 3px;
+}
+.segment-btn {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    border-radius: 7px;
+    padding: 7px 12px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.segment-btn:hover,
+.segment-btn:focus-visible {
+    color: var(--fg);
+    outline: none;
+}
+.segment-btn.active {
+    color: #07111d;
+    background: var(--accent);
+}
 
 .chips-bar {
     display: flex; flex-wrap: wrap; gap: 8px;
