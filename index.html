@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toledo Volleyball - Coach Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="modules/config.js" defer></script>
+    <script src="modules/roster.js" defer></script>
+    <script src="modules/csv_parser.js" defer></script>
+    <script src="modules/storage.js" defer></script>
+    <script src="modules/uploader.js" defer></script>
+    <script src="modules/data.js" defer></script>
+    <script src="modules/analytics.js" defer></script>
+    <script src="modules/charts.js" defer></script>
+    <script src="modules/players.js" defer></script>
+    <script src="modules/setters.js" defer></script>
+    <script src="app.js" defer></script>
+</head>
+<body>
+    <div class="gold-bar"></div>
+
+    <header>
+        <div class="header-content">
+            <div class="header-main">
+                <div class="header-text">
+                    <div class="brand">
+                        <span class="brand-mark">
+                            <img src="assets/toledo-rockets-dark.png" alt="Toledo Rockets logo">
+                        </span>
+                        <div>
+                            <h1>Toledo Volleyball</h1>
+                            <p class="subtitle">Coach Dashboard | Spring 2026 Season</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-stats">
+                    <div class="stat-pill">
+                        <span class="stat-value" id="totalPlayers">-</span>
+                        <span class="stat-label">Roster</span>
+                    </div>
+                    <div class="stat-pill">
+                        <span class="stat-value" id="totalPractices">-</span>
+                        <span class="stat-label">Practice days</span>
+                    </div>
+                    <div class="stat-pill">
+                        <span class="stat-value" id="totalGames">-</span>
+                        <span class="stat-label">Exhibitions</span>
+                    </div>
+                    <button class="data-btn" id="manageDataBtn" title="Upload or manage data">
+                        <span class="data-btn-icon">+</span>
+                        <span>Manage Data</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <nav class="main-nav">
+        <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+        <button class="nav-btn" data-view="players">Players</button>
+        <button class="nav-btn" data-view="setters">Setters</button>
+        <button class="nav-btn" data-view="comparison">Practice vs Games</button>
+        <button class="nav-btn" data-view="timeline">Timeline</button>
+    </nav>
+
+    <!-- Shown when IndexedDB has no data yet. -->
+    <section id="emptyState" class="empty-screen hidden">
+        <div class="empty-card">
+            <div class="empty-icon">
+                <img src="assets/toledo-rockets-dark.png" alt="Toledo Rockets logo">
+            </div>
+            <h2>Welcome, coach.</h2>
+            <p class="empty-lead">Upload your season's CSV exports to get started. The dashboard auto-detects which file belongs to which session.</p>
+
+            <div id="dropzonePrimary" class="dropzone">
+                <div class="dropzone-icon">CSV</div>
+                <div class="dropzone-title">Drop your season folder here</div>
+                <div class="dropzone-sub">or pick a folder / files below</div>
+                <div class="dropzone-actions">
+                    <label class="btn primary">
+                        <input type="file" id="folderInputPrimary" webkitdirectory directory multiple style="display:none">
+                        Choose folder
+                    </label>
+                    <label class="btn">
+                        <input type="file" id="fileInputPrimary" multiple accept=".csv" style="display:none">
+                        Choose CSV files
+                    </label>
+                </div>
+            </div>
+
+            <details class="formats-help">
+                <summary>What file naming does it expect?</summary>
+                <div class="formats-body">
+                    <ul>
+                        <li><code>MM.DD Practice.csv</code> - team-wide practice (e.g. <code>03.10 Practice.csv</code>)</li>
+                        <li><code>MM.DD Practice Setter.csv</code> - per-setter practice (e.g. <code>03.10 Practice Gabbi.csv</code>)</li>
+                        <li><code>MM.DD Exhibition Opponent.csv</code> - team exhibition (e.g. <code>03.28 Exhibition Cleveland State.csv</code>)</li>
+                        <li><code>MM.DD Opponent Setter.csv</code> - per-setter exhibition (e.g. <code>03.28 Cleveland State Janelle.csv</code>)</li>
+                    </ul>
+                    <p class="muted small">Folder layout like <code>Team Stats / Setter Stats / Exhibitions / Team Exhibition / Exhibitions / Setter Exhibition</code> is auto-detected too. Setter names come from your roster (currently: <span id="rosterSetters"></span>).</p>
+                </div>
+            </details>
+        </div>
+    </section>
+
+    <main class="container" id="appMain">
+
+        <!-- ============== Dashboard ============== -->
+        <div id="dashboardView" class="view active">
+            <section class="card focus-card">
+                <div class="card-head">
+                    <div>
+                        <h2>Focus This Week</h2>
+                        <p class="card-subtitle">Top items worth your attention from the most recent data.</p>
+                    </div>
+                </div>
+                <div id="focusInsights" class="insights-grid"></div>
+            </section>
+
+            <div class="grid-2">
+                <section class="card">
+                    <h3>Top Improvers</h3>
+                    <p class="card-subtitle">Biggest attack % gains, last 5 practices vs first 5.</p>
+                    <div id="improvingPlayers" class="mover-list"></div>
+                </section>
+                <section class="card">
+                    <h3>Needs Attention</h3>
+                    <p class="card-subtitle">Players whose attack % is trending down.</p>
+                    <div id="decliningPlayers" class="mover-list"></div>
+                </section>
+            </div>
+
+            <section class="card">
+                <h3>Position Health</h3>
+                <p class="card-subtitle">Recent performance grouped by line of attack.</p>
+                <div id="positionHealth" class="health-grid"></div>
+            </section>
+
+            <div class="grid-2">
+                <section class="card">
+                    <h3>Latest Session</h3>
+                    <p class="card-subtitle">Top hitters from the most recent practice or game.</p>
+                    <div id="latestSession"></div>
+                </section>
+                <section class="card">
+                    <h3>Team Attack % Over Time</h3>
+                    <p class="card-subtitle">Gold = exhibition | Blue = practice.</p>
+                    <div id="teamTrendChart"></div>
+                </section>
+            </div>
+
+            <div class="grid-4">
+                <div class="card stat-card">
+                    <div class="stat-icon">ATK</div>
+                    <div class="stat-content">
+                        <div class="stat-big" id="avgAttackPct">-</div>
+                        <div class="stat-desc">Team Attack %</div>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon">K/S</div>
+                    <div class="stat-content">
+                        <div class="stat-big" id="avgKillsPerSet">-</div>
+                        <div class="stat-desc">Avg Kills / Set</div>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon">SRV</div>
+                    <div class="stat-content">
+                        <div class="stat-big" id="avgServeEff">-</div>
+                        <div class="stat-desc">Avg Serve Eff</div>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon">PASS</div>
+                    <div class="stat-content">
+                        <div class="stat-big" id="avgPassPct">-</div>
+                        <div class="stat-desc">Avg Pass Rating</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============== Players ============== -->
+        <div id="playersView" class="view">
+            <div class="controls-bar">
+                <div class="search-box">
+                    <input type="text" id="playerSearch" placeholder="Search by name or position...">
+                </div>
+                <div class="filter-group">
+                    <label>Sort by</label>
+                    <select id="playerSort">
+                        <option value="improvement" selected>Improvement</option>
+                        <option value="attackPct">Recent Attack %</option>
+                        <option value="killsPerSet">Kills/Set</option>
+                        <option value="name">Name</option>
+                        <option value="jersey">Jersey #</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="positionChips" class="chips-bar"></div>
+            <div id="playersList"></div>
+        </div>
+
+        <!-- ============== Setters ============== -->
+        <div id="settersView" class="view">
+            <section class="card">
+                <h2>Setter Comparison</h2>
+                <p class="card-subtitle">Side-by-side stats across all three setters.</p>
+                <div id="setterComparisonTable"></div>
+            </section>
+
+            <div class="grid-2">
+                <section class="card">
+                    <h3>Best Setter to Hitter Pairings</h3>
+                    <p class="card-subtitle">Best lift over each hitter's normal attack baseline.</p>
+                    <div id="bestPairings" class="pairings-list"></div>
+                </section>
+                <section class="card">
+                    <h3>Setter Lift Heatmap</h3>
+                    <p class="card-subtitle">How much each setter raises or lowers each hitter from baseline. Hover for details.</p>
+                    <div id="chemistryMatrix"></div>
+                </section>
+            </div>
+
+            <div class="grid-3">
+                <section class="card setter-card">
+                    <h3>Gabbi LeBlanc</h3>
+                    <div id="gabbiStats"></div>
+                </section>
+                <section class="card setter-card">
+                    <h3>Janelle Green</h3>
+                    <div id="janelleStats"></div>
+                </section>
+                <section class="card setter-card">
+                    <h3>Maddy Bach</h3>
+                    <div id="maddyStats"></div>
+                </section>
+            </div>
+        </div>
+
+        <!-- ============== Practice vs Games ============== -->
+        <div id="comparisonView" class="view">
+            <section class="card">
+                <h2>Practice vs Exhibition Role Metrics</h2>
+                <p class="card-subtitle">Separate views keep attack percentages and 0-3 ratings on their own scales.</p>
+                <div class="comparison-chart-grid">
+                    <div class="comparison-chart-panel" data-expand-chart="hitters" role="button" tabindex="0" aria-label="Expand hitters comparison chart">
+                        <div class="comparison-chart-head">
+                            <div class="comparison-chart-title">
+                                <h3>Hitters</h3>
+                                <span class="tag accent">Attack %</span>
+                            </div>
+                            <button class="chart-expand-btn" type="button" data-expand-chart="hitters">Expand</button>
+                        </div>
+                        <div id="comparisonHittersChart" class="comparison-chart"></div>
+                    </div>
+                    <div class="comparison-chart-panel" data-expand-chart="setters" role="button" tabindex="0" aria-label="Expand setters comparison chart">
+                        <div class="comparison-chart-head">
+                            <div class="comparison-chart-title">
+                                <h3>Setters</h3>
+                                <span class="tag accent">Set Rating</span>
+                            </div>
+                            <button class="chart-expand-btn" type="button" data-expand-chart="setters">Expand</button>
+                        </div>
+                        <div id="comparisonSettersChart" class="comparison-chart"></div>
+                    </div>
+                    <div class="comparison-chart-panel" data-expand-chart="defenders" role="button" tabindex="0" aria-label="Expand defenders comparison chart">
+                        <div class="comparison-chart-head">
+                            <div class="comparison-chart-title">
+                                <h3>Defenders</h3>
+                                <span class="tag accent">Pass Rating</span>
+                            </div>
+                            <button class="chart-expand-btn" type="button" data-expand-chart="defenders">Expand</button>
+                        </div>
+                        <div id="comparisonDefendersChart" class="comparison-chart"></div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="grid-2">
+                <section class="card">
+                    <h3>Clutch Performers</h3>
+                    <p class="card-subtitle">Players who elevate their role metric from practice to games.</p>
+                    <div id="clutchPlayers" class="mover-list"></div>
+                </section>
+                <section class="card">
+                    <h3>Practice Warriors</h3>
+                    <p class="card-subtitle">Strong in practice, then drop off in games by role metric.</p>
+                    <div id="practiceWarriors" class="mover-list"></div>
+                </section>
+            </div>
+        </div>
+
+        <!-- ============== Timeline ============== -->
+        <div id="timelineView" class="view">
+            <section class="card">
+                <h2>Season Calendar</h2>
+                <p class="card-subtitle">All practices and exhibitions, grouped by week.</p>
+                <div id="timelineCalendar"></div>
+            </section>
+
+            <section class="card">
+                <h2>Performance Over Time</h2>
+                <div class="controls-bar">
+                    <div class="filter-group">
+                        <label>Metric</label>
+                        <select id="timelineMetric">
+                            <option value="attack_pct">Attack %</option>
+                            <option value="attack_k_per_set">Kills / Set</option>
+                            <option value="serve_eff">Serve Efficiency</option>
+                            <option value="receive_pass_pct">Pass Rating</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="timelineChart"></div>
+            </section>
+        </div>
+    </main>
+
+    <!-- ============== Player Detail Modal ============== -->
+    <div id="playerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div id="modalPlayerHeader" class="modal-header-content"></div>
+                <button class="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="modalKpis" class="kpi-tiles modal-kpis"></div>
+                <div id="modalDataFlags" class="quality-flags"></div>
+
+                <section class="modal-section">
+                    <h3>Practice vs Games</h3>
+                    <div id="modalPvg"></div>
+                </section>
+
+                <section class="modal-section">
+                    <h3 id="modalRoleBreakdownTitle">Role Breakdown</h3>
+                    <div id="modalRoleBreakdown" class="role-breakdown"></div>
+                </section>
+
+                <div class="grid-2">
+                    <section class="modal-section">
+                        <h3 id="modalPrimaryTrendTitle">Primary Trend</h3>
+                        <p id="modalPrimaryTrendNote" class="chart-note"></p>
+                        <div id="modalAttackChart"></div>
+                    </section>
+                    <section class="modal-section">
+                        <h3 id="modalSecondaryTrendTitle">Secondary Trend</h3>
+                        <p id="modalSecondaryTrendNote" class="chart-note"></p>
+                        <div id="modalKillsChart"></div>
+                    </section>
+                </div>
+
+                <section class="modal-section">
+                    <h3>Attack % by Setter</h3>
+                    <p class="card-subtitle">Which setter empowers this hitter most? (Hitters only)</p>
+                    <div id="modalPerSetter"></div>
+                </section>
+
+                <section class="modal-section">
+                    <h3>Recent Sessions</h3>
+                    <table id="modalRecentStats" class="data-table"></table>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============== Data Management Modal ============== -->
+    <div id="dataModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h2>Manage Data</h2>
+                    <p class="card-subtitle">Upload more CSVs, see what's loaded, or reset.</p>
+                </div>
+                <button class="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <section class="modal-section">
+                    <h3>Current Dataset</h3>
+                    <div id="dataSummary" class="data-summary"></div>
+                </section>
+
+                <section class="modal-section">
+                    <h3>Add or Replace Files</h3>
+                    <p class="card-subtitle">New files are merged in. Existing sessions with the same date / opponent / setter are replaced.</p>
+                    <div id="dropzoneSecondary" class="dropzone compact">
+                        <div class="dropzone-title">Drop a folder or CSVs here</div>
+                        <div class="dropzone-actions">
+                            <label class="btn primary">
+                                <input type="file" id="folderInputSecondary" webkitdirectory directory multiple style="display:none">
+                                Choose folder
+                            </label>
+                            <label class="btn">
+                                <input type="file" id="fileInputSecondary" multiple accept=".csv" style="display:none">
+                                Choose CSV files
+                            </label>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="modal-section" id="uploadResultSection" style="display:none;">
+                    <h3>Latest Upload</h3>
+                    <div id="uploadResult"></div>
+                </section>
+
+                <section class="modal-section danger">
+                    <h3>Reset</h3>
+                    <p class="card-subtitle">Clears all uploaded data from this browser. You'll need to upload again.</p>
+                    <button class="btn danger" id="resetDataBtn">Clear all data</button>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============== Expanded Comparison Chart Modal ============== -->
+    <div id="comparisonChartModal" class="modal">
+        <div class="modal-content chart-modal-content">
+            <div class="modal-header">
+                <div>
+                    <h2 id="comparisonChartModalTitle">Role Metric</h2>
+                    <p id="comparisonChartModalSubtitle" class="card-subtitle">Practice vs exhibition comparison.</p>
+                </div>
+                <button class="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body chart-modal-body">
+                <div id="comparisonExpandedChart" class="comparison-expanded-chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Loading volleyball stats...</p>
+    </div>
+</body>
+</html>
